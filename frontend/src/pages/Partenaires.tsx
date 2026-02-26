@@ -6,8 +6,9 @@ import leGuide from "@/assets/partners/le-guide.png";
 import kdmSono from "@/assets/partners/kdm-sono.png";
 import trecyClean from "@/assets/partners/trecy-clean.png";
 import noirFier from "@/assets/partners/noir-et-fier.png";
-import tia from "@/assets/partners/3ia.png";
 import tiaLogo from "@/assets/partners/3ia-logo.png";
+import sirTech from "@/assets/partners/sir.png";
+import firstKlass from "@/assets/partners/class.jpeg";
 
 interface Partner {
   nom: string;
@@ -21,21 +22,31 @@ interface Partner {
 
 const partners: Partner[] = [
   { 
-    nom: "3iA", 
-    logo: tia, 
+    nom: "Sir-Tech", 
+    logo: sirTech, 
     categorie: "Platine", 
-    description: "Institut Ingénierie Informatique Appliquée - Formation d'excellence en informatique", 
-    site: "https://institut3ia.com",
-    email: "contact@3ia.com",
-    telephone: "+237 689786756"
+    description: "Prestation de services informatiques – Ventes des Accessoires Informatique – Commerce import/export – Formations", 
+    site: "https://www.sir-tech.org",
+    telephone: "+237 652 430 272",
+    email: "contact@sir-tech.org"
   },
   { 
     nom: "3iA", 
     logo: tiaLogo, 
     categorie: "Or", 
-    description: "Institut Ingénierie Informatique Appliquée", 
+    description: "Institut Ingénierie Informatique Appliquée - Formation d'excellence en informatique", 
     site: "https://institut3ia.com",
+    telephone: "+237 683 44 93 78",
     email: "contact@3ia.com"
+  },
+  { 
+    nom: "First Klass", 
+    logo: firstKlass, 
+    categorie: "Or", 
+    description: "Studio photo professionnel - Shooting, événements et couverture médiatique", 
+    site: "#",
+    telephone: "+237 6XX XXX XXX",
+    email: "contact@firstklass.cm"
   },
   { 
     nom: "KDM Sono", 
@@ -43,7 +54,7 @@ const partners: Partner[] = [
     categorie: "Or", 
     description: "Sonorisation & Événementiel - Équipement professionnel pour vos événements", 
     site: "#",
-    telephone: "+33 6 12 34 56 78"
+    telephone: "+237 6XX XXX XXX"
   },
   { 
     nom: "Noir & Fier", 
@@ -66,7 +77,7 @@ const partners: Partner[] = [
     categorie: "Bronze", 
     description: "Services de nettoyage professionnel pour entreprises et particuliers", 
     site: "#",
-    telephone: "+33 4 56 78 90 12"
+    telephone: "+237 6XX XXX XXX"
   },
 ];
 
@@ -201,7 +212,7 @@ const PartnerContactForm = () => {
             value={form.telephone}
             onChange={handleChange}
             className="w-full rounded-lg border border-border bg-secondary px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-gold/50 transition-all font-body text-sm"
-            placeholder="+225 XX XX XX XX"
+            placeholder="+237 XX XX XX XX"
           />
         </div>
       </div>
@@ -463,26 +474,6 @@ const Partenaires = () => (
             transition={{ duration: 0.6, delay: 0.2 }}
             className="lg:col-span-2 space-y-6"
           >
-            {/* Download brochure - Bouton en or */}
-            <div className="rounded-2xl border border-gold/20 bg-gradient-to-br from-gold/10 to-transparent p-8 text-center">
-              <div className="w-16 h-16 rounded-full bg-gold/20 flex items-center justify-center mx-auto mb-4">
-                <Download className="w-7 h-7 text-gold" />
-              </div>
-              <h4 className="font-display font-bold text-lg mb-2">Brochure Partenariat</h4>
-              <p className="text-muted-foreground text-sm font-body mb-5">
-                Découvrez nos offres détaillées et les avantages de chaque catégorie.
-              </p>
-              <motion.a
-                href="#"
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-                className="inline-flex items-center gap-2 bg-gradient-to-r from-gold to-yellow-500 text-primary-foreground font-body font-semibold py-3 px-6 rounded-lg shadow-lg hover:shadow-xl transition-all text-sm"
-              >
-                <Download className="w-4 h-4" />
-                Télécharger le PDF
-              </motion.a>
-            </div>
-
             {/* Contact info */}
             <div className="rounded-2xl border border-border bg-card p-8">
               <h4 className="font-display font-bold text-lg mb-4">Contact Direct</h4>
@@ -493,11 +484,14 @@ const Partenaires = () => (
                 </p>
                 <p className="text-muted-foreground">
                   <span className="text-foreground font-medium">Téléphone :</span>{" "}
-                  +225 07 XX XX XX XX
+                  +237 652 430 272
                 </p>
                 <p className="text-muted-foreground">
                   <span className="text-foreground font-medium">Adresse :</span>{" "}
                   Dschang, Cameroun
+                </p>
+                <p className="text-muted-foreground text-xs mt-4">
+                  <span className="text-foreground font-medium">RCCM :</span> RC/Dschang/2021/A/05
                 </p>
               </div>
             </div>
