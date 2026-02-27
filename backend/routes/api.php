@@ -44,6 +44,11 @@ Route::get('/candidats/{id}/votes', [CandidatController::class, 'votes']);
 // Votes
 Route::post('/votes', [VoteController::class, 'store']);
 Route::post('/votes/callback', [VoteController::class, 'callback']); // Webhook paiement
+// Callback NotchPay (webhook)
+Route::post('/votes/callback/notchpay', [VoteController::class, 'callbackNotchPay']);
+// Webhook NotchPay pour billets
+Route::post('/billets/callback/notchpay', [BilletController::class, 'callbackNotchPay']);
+
 
 // Billetterie
 Route::get('/packs', [PackController::class, 'index']);

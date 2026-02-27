@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('telephone');
             $table->integer('quantite');
             $table->integer('montant_total');
-            $table->enum('mode_paiement', ['orange', 'mtn']);
+            $table->enum('mode_paiement', ['orange', 'mtn', 'notchpay']); // 
             $table->string('transaction_id')->unique();
             $table->string('qr_code')->unique();
             $table->enum('statut_paiement', ['en_attente', 'valide', 'echoue'])->default('en_attente');

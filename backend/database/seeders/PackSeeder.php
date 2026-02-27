@@ -21,6 +21,7 @@ class PackSeeder extends Seeder
         // Pack VIP
         Pack::create([
             'nom' => 'VIP',
+            'image' => 'vip.jpg',
             'prix' => 50000, // 50 000 FCFA
             'places_disponibles' => 100,
             'places_vendues' => 0,
@@ -37,6 +38,7 @@ class PackSeeder extends Seeder
         // Pack Gold
         Pack::create([
             'nom' => 'Gold',
+            'image' => 'gold.jpg',
             'prix' => 30000,
             'places_disponibles' => 200,
             'places_vendues' => 0,
@@ -52,6 +54,7 @@ class PackSeeder extends Seeder
         // Pack Standard
         Pack::create([
             'nom' => 'Standard',
+            'image' => 'standard.jpg',
             'prix' => 15000,
             'places_disponibles' => 500,
             'places_vendues' => 0,
@@ -65,6 +68,7 @@ class PackSeeder extends Seeder
         // Pack Étudiant
         Pack::create([
             'nom' => 'Étudiant',
+            'image' => 'etudiant.jpg',
             'prix' => 10000,
             'places_disponibles' => 200,
             'places_vendues' => 0,
