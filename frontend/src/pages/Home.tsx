@@ -1,7 +1,7 @@
 /**
  * Page d'accueil - Golden Vibes Events
  * -----------------------------------------
- * Toutes les sections : Hero, Présentation, Candidats défilants,
+ * Toutes les sections : Hero, Présentation, Candidats (leaders seulement),
  * Événements annexes, Line-up (DJs + Artistes), Partenaires,
  * Témoignages, Actualités, CTA final.
  */
@@ -12,7 +12,7 @@ import { motion } from "framer-motion";
 import {
   Crown, Ticket, Users, Star, MapPin, Calendar, Music, Heart,
   ChevronRight, ChevronLeft, Clock, Eye, Quote, Newspaper,
-  UserPlus, Handshake, Facebook, Instagram, Twitter, Phone
+  UserPlus, Handshake, Facebook, Instagram, Twitter, Phone, Play, Trophy
 } from "lucide-react";
 import heroBg from "@/assets/hero-bg.jpg";
 import logo from "@/assets/logo-golden-vibes.png";
@@ -31,14 +31,104 @@ import wizdomOg from "@/assets/artists/wizdom-og.jpg";
 import karlixGyal from "@/assets/artists/karlix-gyal.jpg";
 import artisteSurprise from "@/assets/artists/artiste-surprise.jpg";
 
-/* ── Données mock candidats ── */
+/* ── Données mock candidats avec plusieurs photos ── */
 const candidats = [
-  { id: 1, nom: "Nguemo Tatiana", numero: 1, categorie: "miss", votes: 1102, age: 22, ville: "Dschang", talent: "Danse Contemporaine", photo: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=400&h=600&fit=crop" },
-  { id: 2, nom: "Kamga Brielle", numero: 2, categorie: "miss", votes: 876, age: 21, ville: "Bafoussam", talent: "Chant Gospel", photo: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=600&fit=crop" },
-  { id: 3, nom: "Fotso Mireille", numero: 3, categorie: "miss", votes: 954, age: 23, ville: "Douala", talent: "Mode & Stylisme", photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=600&fit=crop" },
-  { id: 4, nom: "Tchamba Kevin", numero: 1, categorie: "master", votes: 982, age: 24, ville: "Yaoundé", talent: "Poésie Slam", photo: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=600&fit=crop" },
-  { id: 5, nom: "Mbarga Yves", numero: 2, categorie: "master", votes: 745, age: 25, ville: "Dschang", talent: "Entrepreneuriat", photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=600&fit=crop" },
-  { id: 6, nom: "Djomo Patrick", numero: 3, categorie: "master", votes: 820, age: 23, ville: "Bamenda", talent: "Art Oratoire", photo: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=600&fit=crop" },
+  { 
+    id: 1, 
+    nom: "Nguemo Tatiana", 
+    numero: 1, 
+    categorie: "miss", 
+    votes: 1102, 
+    age: 22, 
+    ville: "Dschang", 
+    talent: "Danse Contemporaine",
+    description: "Danseuse passionnée depuis l'enfance, je veux représenter la grâce et l'élégance de la femme camerounaise.",
+    photos: [
+      "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=400&h=600&fit=crop",
+      "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=400&h=600&fit=crop",
+      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=600&fit=crop"
+    ]
+  },
+  { 
+    id: 2, 
+    nom: "Kamga Brielle", 
+    numero: 2, 
+    categorie: "miss", 
+    votes: 876, 
+    age: 21, 
+    ville: "Bafoussam", 
+    talent: "Chant Gospel",
+    description: "Artiste gospel avec une voix qui touche les cœurs. Je chante pour la paix et l'unité.",
+    photos: [
+      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=600&fit=crop",
+      "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=400&h=600&fit=crop",
+      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=400&h=600&fit=crop"
+    ]
+  },
+  { 
+    id: 3, 
+    nom: "Fotso Mireille", 
+    numero: 3, 
+    categorie: "miss", 
+    votes: 954, 
+    age: 23, 
+    ville: "Douala", 
+    talent: "Mode & Stylisme",
+    description: "Créatrice de mode, passionnée par l'élégance et le design africain.",
+    photos: [
+      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=600&fit=crop",
+      "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=400&h=600&fit=crop",
+      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=400&h=600&fit=crop"
+    ]
+  },
+  { 
+    id: 4, 
+    nom: "Tchamba Kevin", 
+    numero: 1, 
+    categorie: "master", 
+    votes: 982, 
+    age: 24, 
+    ville: "Yaoundé", 
+    talent: "Poésie Slam",
+    description: "Poète engagé, j'utilise les mots pour inspirer le changement et l'espoir.",
+    photos: [
+      "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=600&fit=crop",
+      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=600&fit=crop",
+      "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&h=600&fit=crop"
+    ]
+  },
+  { 
+    id: 5, 
+    nom: "Mbarga Yves", 
+    numero: 2, 
+    categorie: "master", 
+    votes: 745, 
+    age: 25, 
+    ville: "Dschang", 
+    talent: "Entrepreneuriat",
+    description: "Jeune entrepreneur innovant dans la tech. Je crée des solutions pour l'éducation.",
+    photos: [
+      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=600&fit=crop",
+      "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=400&h=600&fit=crop",
+      "https://images.unsplash.com/photo-1463453091185-61582044d556?w=400&h=600&fit=crop"
+    ]
+  },
+  { 
+    id: 6, 
+    nom: "Djomo Patrick", 
+    numero: 3, 
+    categorie: "master", 
+    votes: 820, 
+    age: 23, 
+    ville: "Bamenda", 
+    talent: "Art Oratoire",
+    description: "Orateur passionné, je crois en la puissance des mots pour changer le monde.",
+    photos: [
+      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=600&fit=crop",
+      "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=600&fit=crop",
+      "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&h=600&fit=crop"
+    ]
+  },
 ];
 
 /* ── DJs ── */
@@ -79,27 +169,16 @@ const actualites = [
 ];
 
 const Home = () => {
-  const [filtre, setFiltre] = useState("tous");
+  /* Trouver les leaders (premier de chaque catégorie par votes) */
+  const missLeader = [...candidats]
+    .filter(c => c.categorie === "miss")
+    .sort((a, b) => b.votes - a.votes)[0];
+  
+  const masterLeader = [...candidats]
+    .filter(c => c.categorie === "master")
+    .sort((a, b) => b.votes - a.votes)[0];
 
-  /* Candidats filtrés */
-  const filtered = candidats.filter((c) => filtre === "tous" || c.categorie === filtre);
-
-  /* Auto-défilement continu des candidats */
-  const [autoIndex, setAutoIndex] = useState(0);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  useEffect(() => {
-    intervalRef.current = setInterval(() => {
-      setAutoIndex((prev) => (prev + 1) % (filtered.length || 1));
-    }, 3000);
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [filtered.length]);
-
-  useEffect(() => { setAutoIndex(0); }, [filtre]);
-
-  const changeFiltre = (f: string) => setFiltre(f);
-  const goPrev = () => setAutoIndex((i) => (i === 0 ? filtered.length - 1 : i - 1));
-  const goNext = () => setAutoIndex((i) => (i === filtered.length - 1 ? 0 : i + 1));
+  const leaders = [missLeader, masterLeader].filter(Boolean); // Filtrer les undefined
 
   /* Compteur votes total */
   const totalVotes = candidats.reduce((acc, c) => acc + c.votes, 0);
@@ -127,17 +206,16 @@ const Home = () => {
           </motion.div>
 
           {/* Compteur de votes en temps réel */}
-          <motion.div className="mt-6 inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-primary/30 rounded-full px-6 py-2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }}>
-            <Heart size={18} className="text-primary animate-pulse" />
-            <span className="text-white font-bold text-lg">{totalVotes.toLocaleString()}</span>
-            <span className="text-white/70 text-sm">votes au total</span>
-          </motion.div>
+         
 
           {/* CTA principaux */}
           <motion.div className="flex flex-wrap justify-center gap-3 mt-8" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.9 }}>
-            <Link to="/vote" className="gold-gradient text-primary-foreground px-6 py-3 rounded-lg font-semibold text-sm uppercase tracking-wider hover:opacity-90 transition-opacity flex items-center gap-2">
+            <a 
+              href="http://localhost:8080/vote?candidat=4" 
+              className="gold-gradient text-primary-foreground px-6 py-3 rounded-lg font-semibold text-sm uppercase tracking-wider hover:opacity-90 transition-opacity flex items-center gap-2"
+            >
               <Heart size={16} /> Voter Maintenant
-            </Link>
+            </a>
             <Link to="/billetterie" className="border border-primary text-primary px-6 py-3 rounded-lg font-semibold text-sm uppercase tracking-wider hover:bg-primary/10 transition-colors flex items-center gap-2">
               <Ticket size={16} /> Acheter un Billet
             </Link>
@@ -170,60 +248,30 @@ const Home = () => {
         </div>
       </section>
 
-      {/* ===== 3. CANDIDATS (défilement continu) ===== */}
+      {/* ===== 3. LEADERS (MISS et MASTER en tête) ===== */}
       <section className="py-12 bg-card">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-6">
-            <h2 className="font-display text-2xl sm:text-3xl gold-text mb-2">Soutenez vos favoris</h2>
-            <p className="text-sm text-muted-foreground">Les candidat(e)s défilent en continu — votez pour vos préféré(e)s</p>
+          <div className="text-center mb-8">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <Trophy size={24} className="text-gold" />
+              <h2 className="font-display text-2xl sm:text-3xl gold-text">Les Leaders</h2>
+              <Trophy size={24} className="text-gold" />
+            </div>
+            <p className="text-sm text-muted-foreground">Miss et Master en tête des votes</p>
           </div>
 
-          {/* Filtres */}
-          <div className="flex justify-center gap-3 mb-8">
-            {[
-              { key: "tous", label: "TOUS" },
-              { key: "miss", label: "MISS" },
-              { key: "master", label: "MASTER" },
-            ].map((f) => (
-              <button
-                key={f.key}
-                onClick={() => changeFiltre(f.key)}
-                className={`px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all ${
-                  filtre === f.key ? "gold-gradient text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground border border-border"
-                }`}
-              >
-                {f.label}
-              </button>
+          {/* Desktop : 2 colonnes côte à côte */}
+          <div className="hidden md:grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+            {leaders.map((c, i) => (
+              <LeaderCard key={c.id} candidat={c} delay={i * 0.1} />
             ))}
           </div>
 
-          {/* Desktop : grille 3 colonnes */}
-          <div className="hidden md:grid grid-cols-2 lg:grid-cols-3 gap-6">
-            {filtered.map((c, i) => (
-              <CandidatCard key={c.id} candidat={c} delay={i * 0.08} />
+          {/* Mobile : 1 carte par ligne (pleine largeur) */}
+          <div className="md:hidden space-y-6 max-w-sm mx-auto">
+            {leaders.map((c, i) => (
+              <LeaderCard key={c.id} candidat={c} delay={i * 0.1} />
             ))}
-          </div>
-
-          {/* Mobile : défilement automatique, une card à la fois */}
-          <div className="md:hidden">
-            {filtered.length > 0 && (
-              <div className="relative max-w-sm mx-auto">
-                <CandidatCard candidat={filtered[autoIndex % filtered.length]} delay={0} />
-                <div className="flex items-center justify-between mt-4">
-                  <button onClick={goPrev} className="w-10 h-10 rounded-full bg-secondary border border-border flex items-center justify-center text-foreground">
-                    <ChevronLeft size={20} />
-                  </button>
-                  <div className="flex gap-1.5">
-                    {filtered.map((_, i) => (
-                      <span key={i} className={`w-2 h-2 rounded-full transition-colors ${i === autoIndex % filtered.length ? "bg-primary" : "bg-border"}`} />
-                    ))}
-                  </div>
-                  <button onClick={goNext} className="w-10 h-10 rounded-full bg-secondary border border-border flex items-center justify-center text-foreground">
-                    <ChevronRight size={20} />
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
 
           <div className="text-center mt-8">
@@ -386,9 +434,12 @@ const Home = () => {
             <Link to="/billetterie" className="flex items-center gap-2 border border-primary text-primary px-6 py-3 rounded-lg font-semibold text-sm uppercase tracking-wider hover:bg-primary/10 transition-colors">
               <Ticket size={18} /> Billetterie
             </Link>
-            <Link to="/vote" className="flex items-center gap-2 border border-primary text-primary px-6 py-3 rounded-lg font-semibold text-sm uppercase tracking-wider hover:bg-primary/10 transition-colors">
+            <a 
+              href="http://localhost:8080/vote?candidat=4" 
+              className="flex items-center gap-2 border border-primary text-primary px-6 py-3 rounded-lg font-semibold text-sm uppercase tracking-wider hover:bg-primary/10 transition-colors"
+            >
               <Heart size={18} /> Voter
-            </Link>
+            </a>
           </div>
 
           {/* Réseaux sociaux */}
@@ -411,38 +462,175 @@ const Home = () => {
   );
 };
 
-/* ===== Composant Card Candidat ===== */
-const CandidatCard = ({ candidat: c, delay }: { candidat: typeof candidats[0]; delay: number }) => (
-  <motion.div
-    className="bg-card rounded-xl border border-border overflow-hidden group hover:border-primary/50 transition-all"
-    initial={{ opacity: 0, y: 20 }}
-    whileInView={{ opacity: 1, y: 0 }}
-    viewport={{ once: true }}
-    transition={{ delay }}
-  >
-    <div className="relative aspect-[3/4] overflow-hidden">
-      <img src={c.photo} alt={c.nom} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-      <div className="absolute top-3 left-3">
-        <span className="gold-gradient text-primary-foreground text-xs font-bold px-3 py-1 rounded-full uppercase">{c.categorie}</span>
+/* ===== Composant Carte Leader (avec défilement d'images) ===== */
+const LeaderCard = ({ candidat: c, delay }: { candidat: typeof candidats[0]; delay: number }) => {
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const intervalRef = useRef(null);
+
+  const totalImages = c.photos.length;
+
+  // Défilement automatique
+  useEffect(() => {
+    if (!isPaused && totalImages > 1) {
+      intervalRef.current = setInterval(() => {
+        setCurrentImageIndex((prevIndex) => (prevIndex + 1) % totalImages);
+      }, 3000);
+    }
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, [isPaused, totalImages]);
+
+  const handleMouseEnter = () => setIsPaused(true);
+  const handleMouseLeave = () => setIsPaused(false);
+
+  const handlePrev = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCurrentImageIndex((prevIndex) => 
+      prevIndex === 0 ? totalImages - 1 : prevIndex - 1
+    );
+    setIsPaused(true);
+    setTimeout(() => setIsPaused(false), 5000);
+  };
+
+  const handleNext = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCurrentImageIndex((prevIndex) => 
+      (prevIndex + 1) % totalImages
+    );
+    setIsPaused(true);
+    setTimeout(() => setIsPaused(false), 5000);
+  };
+
+  const goToImage = (index) => {
+    setCurrentImageIndex(index);
+    setIsPaused(true);
+    setTimeout(() => setIsPaused(false), 5000);
+  };
+
+  return (
+    <motion.div
+      className="bg-card rounded-xl border-2 border-gold/30 overflow-hidden group hover:border-gold transition-all shadow-xl"
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ delay }}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
+      <div className="relative aspect-[3/4] overflow-hidden">
+        {/* Badge Leader */}
+        <div className="absolute top-2 left-2 z-20">
+          <span className="bg-gold text-primary-foreground text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-lg">
+            <Trophy size={12} /> LEADER {c.categorie === "miss" ? "MISS" : "MASTER"}
+          </span>
+        </div>
+
+        {/* Images en défilement */}
+        <div className="w-full h-full">
+          {c.photos.map((photo, index) => (
+            <img
+              key={index}
+              src={photo}
+              alt={`${c.nom} - photo ${index + 1}`}
+              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
+                index === currentImageIndex ? 'opacity-100' : 'opacity-0'
+              }`}
+            />
+          ))}
+        </div>
+
+        {/* Indicateurs de position */}
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5 z-20">
+          {c.photos.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => goToImage(i)}
+              className={`transition-all ${
+                i === currentImageIndex 
+                  ? 'w-3 h-1.5 bg-gold rounded-full' 
+                  : 'w-1.5 h-1.5 bg-white/70 rounded-full hover:bg-white'
+              }`}
+              aria-label={`Voir photo ${i + 1}`}
+            />
+          ))}
+        </div>
+
+        {/* Flèches de navigation */}
+        {totalImages > 1 && (
+          <>
+            <button 
+              onClick={handlePrev}
+              className="absolute left-1 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-20 hover:bg-black/70"
+            >
+              <ChevronLeft size={14} className="text-white" />
+            </button>
+            <button 
+              onClick={handleNext}
+              className="absolute right-1 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-20 hover:bg-black/70"
+            >
+              <ChevronRight size={14} className="text-white" />
+            </button>
+          </>
+        )}
+
+        {/* Badge votes */}
+        <div className="absolute top-2 right-2 z-10">
+          <span className="bg-background/80 backdrop-blur-sm text-foreground text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-lg">
+            <Heart size={12} className="text-gold" /> {c.votes.toLocaleString()}
+          </span>
+        </div>
+
+        {/* Indicateur de défilement automatique */}
+        {totalImages > 1 && (
+          <div className="absolute bottom-2 right-2 z-10 md:hidden">
+            <span className="bg-black/50 text-white text-[8px] px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+              <Play size={8} className={isPaused ? "opacity-50" : "animate-pulse"} />
+            </span>
+          </div>
+        )}
       </div>
-      <div className="absolute top-3 right-3">
-        <span className="bg-background/80 backdrop-blur-sm text-foreground text-xs font-bold px-3 py-1 rounded-full">{c.votes.toLocaleString()} VOTES</span>
+      
+      <div className="p-4">
+        <div className="flex justify-between items-start mb-2">
+          <div>
+            <h3 className="font-display text-xl text-foreground leading-tight">{c.nom}</h3>
+            <p className="text-xs text-muted-foreground">{c.age} ans • {c.ville}</p>
+          </div>
+          <span className="text-sm font-bold text-gold">#{c.numero}</span>
+        </div>
+        
+        <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{c.description}</p>
+        
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-xs bg-secondary text-foreground px-2 py-1 rounded-full">
+            {c.talent}
+          </span>
+        </div>
+
+        <div className="flex gap-2">
+          <Link 
+            to={`/candidats/${c.id}`} 
+            className="flex-1 flex items-center justify-center gap-1 py-2 text-xs font-medium bg-secondary text-foreground rounded-lg hover:bg-secondary/80 transition-colors"
+          >
+            <Eye size={14} /> Profil
+          </Link>
+          <a 
+            href={`http://localhost:8080/vote?candidat=${c.id}`}
+            className="flex-1 flex items-center justify-center gap-1 py-2 gold-gradient text-primary-foreground text-xs font-bold uppercase rounded-lg"
+          >
+            <Heart size={14} /> Voter
+          </a>
+        </div>
       </div>
-    </div>
-    <div className="p-4">
-      <h3 className="font-display text-lg text-foreground mb-1">{c.nom}</h3>
-      <p className="text-xs text-muted-foreground mb-2">{c.age} ans • {c.ville}</p>
-      <p className="text-xs text-primary font-bold uppercase tracking-wider">Talent: {c.talent}</p>
-    </div>
-    <div className="flex border-t border-border">
-      <Link to={`/candidats/${c.id}`} className="flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors border-r border-border">
-        <Eye size={14} /> Voir
-      </Link>
-      <Link to={`/vote?candidat=${c.id}`} className="flex-1 flex items-center justify-center gap-1.5 py-3 gold-gradient text-primary-foreground text-xs font-bold uppercase tracking-wider">
-        <Heart size={14} /> Voter
-      </Link>
-    </div>
-  </motion.div>
-);
+    </motion.div>
+  );
+};
 
 export default Home;

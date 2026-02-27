@@ -3,7 +3,7 @@
  * -----------------------------------------
  * Structure commune à toutes les pages publiques :
  * - Navbar en haut (desktop uniquement)
- * - Barre du bas fixe (mobile uniquement, style WhatsApp)
+ * - Barre du bas fixe (mobile uniquement)
  * - Sidebar mobile (drawer)
  * - Pied de page
  */
