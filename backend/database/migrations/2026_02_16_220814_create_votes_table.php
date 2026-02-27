@@ -18,7 +18,7 @@ return new class extends Migration
             $table->integer('nombre_votes');
             $table->integer('montant');
             $table->string('telephone');
-            $table->enum('mode_paiement', ['orange', 'mtn']);
+            $table->enum('mode_paiement', ['orange', 'mtn', 'notchpay']);
             $table->string('transaction_id')->unique();
             $table->enum('statut', ['en_attente', 'valide', 'echoue'])->default('en_attente');
             $table->timestamps();

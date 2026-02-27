@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('packs', function (Blueprint $table) {
             $table->id();
             $table->string('nom');
+            $table->string('image')->nullable();
             $table->integer('prix');
             $table->integer('places_disponibles');
             $table->integer('places_vendues')->default(0);
