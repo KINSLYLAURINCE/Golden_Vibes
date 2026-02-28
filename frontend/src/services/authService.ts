@@ -1,27 +1,63 @@
-/**
- * Service d'authentification
- * -----------------------------------------
- * Gère la connexion, la déconnexion et
- * la vérification du statut d'authentification.
- */
+// services/authService.js
+import axios from 'axios';
 
-import api from "./api";
+const API_URL = 'http://localhost:1002/api';
 
-/* Connexion administrateur */
+const api = axios.create({
+  baseURL: API_URL,
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  },
+  withCredentials: true,
+});
+
+// Intercepteur pour ajouter le token
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  console.log('Requête API:', config.method.toUpperCase(), config.url);
+  return config;
+});
+
+// Service de login
 export const login = async (email, password) => {
-  const response = await api.post("/login", { email, password });
-  return response.data; // { token, user }
+  try {
+    console.log('Tentative de login avec:', email);
+    const response = await api.post('/login', { email, password });
+    console.log('Réponse login:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Erreur détaillée:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status,
+      config: error.config
+    });
+    throw error;
+  }
 };
 
-/* Déconnexion */
 export const logout = async () => {
-  const response = await api.post("/logout");
-  localStorage.removeItem("token");
-  return response.data;
+  try {
+    const response = await api.post('/logout');
+    return response.data;
+  } catch (error) {
+    console.error('Erreur logout:', error);
+    throw error;
+  }
 };
 
-/* Récupérer l'utilisateur connecté */
 export const getProfile = async () => {
-  const response = await api.get("/profile");
-  return response.data;
+  try {
+    const response = await api.get('/me');
+    return response.data;
+  } catch (error) {
+    console.error('Erreur getProfile:', error);
+    throw error;
+  }
 };
+
+export default api;

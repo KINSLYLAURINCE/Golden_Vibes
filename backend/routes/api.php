@@ -114,4 +114,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Gestion Messages
     Route::get('/admin/messages', [MessageController::class, 'index']);
     Route::put('/admin/messages/{id}/lire', [MessageController::class, 'markAsRead']);
+
+    // nouvellement ajouter pour les stats détaillées
+    Route::get('/stats', [StatsController::class, 'index']);
 });

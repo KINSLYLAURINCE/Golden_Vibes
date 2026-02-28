@@ -11,6 +11,8 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Upload, Save, Loader2 } from "lucide-react";
 import axios from "axios";
 
+const API_URL = "http://localhost:1002/api";
+
 const AjouterCandidat = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -18,9 +20,8 @@ const AjouterCandidat = () => {
   const [form, setForm] = useState({
     numero: "",
     nom: "",
-    prenom: "",
     categorie: "",
-    video_url: "",
+    video: "",
     statut: "actif",
   });
   
@@ -43,14 +44,12 @@ const AjouterCandidat = () => {
   const handlePhotoChange = (e, photoNumber) => {
     const file = e.target.files[0];
     if (file) {
-      // Validation du type de fichier
       const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
       if (!allowedTypes.includes(file.type)) {
         setError("Format de fichier non supporté. Utilisez JPG ou PNG.");
         return;
       }
 
-      // Validation de la taille (5 Mo max)
       if (file.size > 5 * 1024 * 1024) {
         setError("Le fichier ne doit pas dépasser 5 Mo.");
         return;
@@ -58,19 +57,11 @@ const AjouterCandidat = () => {
 
       setError("");
       
-      // Mise à jour des photos
-      setPhotos({
-        ...photos,
-        [photoNumber]: file
-      });
+      setPhotos(prev => ({ ...prev, [photoNumber]: file }));
 
-      // Création de l'URL de prévisualisation
       const reader = new FileReader();
       reader.onloadend = () => {
-        setPhotoPreviews({
-          ...photoPreviews,
-          [photoNumber]: reader.result
-        });
+        setPhotoPreviews(prev => ({ ...prev, [photoNumber]: reader.result }));
       };
       reader.readAsDataURL(file);
     }
@@ -80,7 +71,6 @@ const AjouterCandidat = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validation
     if (!form.categorie) {
       setError("Veuillez sélectionner une catégorie");
       return;
@@ -91,33 +81,42 @@ const AjouterCandidat = () => {
       return;
     }
 
+    if (!form.numero) {
+      setError("Le numéro est obligatoire");
+      return;
+    }
+
+    if (!form.nom) {
+      setError("Le nom est obligatoire");
+      return;
+    }
+
     setLoading(true);
     setError("");
 
     try {
-      // Création du FormData pour l'envoi des fichiers
-      const formData = new FormData();
+      //  Récupération du bon token
+      const token = localStorage.getItem('token');
       
-      // Ajout des champs texte
-      formData.append('numero', form.numero);
-      formData.append('nom', form.nom);
-      formData.append('prenom', form.prenom);
-      formData.append('categorie', form.categorie);
-      formData.append('video_url', form.video_url);
-      formData.append('statut', form.statut);
-      
-      // Ajout des photos
-      if (photos.photo1) {
-        formData.append('photo1', photos.photo1);
-      }
-      if (photos.photo2) {
-        formData.append('photo2', photos.photo2);
+      if (!token) {
+        setError("Vous n'êtes pas authentifié. Veuillez vous reconnecter.");
+        setLoading(false);
+        return;
       }
 
-      // Appel API
-      const token = localStorage.getItem('adminToken');
+      const formData = new FormData();
+      formData.append('numero', form.numero);
+      formData.append('nom', form.nom);
+      formData.append('categorie', form.categorie);
+      formData.append('video', form.video);
+      formData.append('statut', form.statut);
+      formData.append('votes_count', 0);
+      
+      if (photos.photo1) formData.append('photo1', photos.photo1);
+      if (photos.photo2) formData.append('photo2', photos.photo2);
+
       const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/admin/candidats`,
+        `${API_URL}/admin/candidats`,
         formData,
         {
           headers: {
@@ -134,9 +133,11 @@ const AjouterCandidat = () => {
         setError(response.data.message || "Erreur lors de l'ajout du candidat");
       }
     } catch (err) {
-      console.error("Erreur lors de l'ajout:", err);
+      console.error("Erreur complète:", err);
       setError(
         err.response?.data?.message || 
+        err.response?.data?.error ||
+        err.message ||
         "Une erreur est survenue lors de l'ajout du candidat"
       );
     } finally {
@@ -145,11 +146,11 @@ const AjouterCandidat = () => {
   };
 
   return (
-    <div>
+    <div className="max-w-4xl mx-auto px-4 py-8">
       {/* En-tête */}
       <button 
         onClick={() => navigate(-1)} 
-        className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4 text-sm"
+        className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4 text-sm transition-colors"
         disabled={loading}
       >
         <ArrowLeft size={16} /> Retour
@@ -167,8 +168,9 @@ const AjouterCandidat = () => {
       <motion.form
         onSubmit={handleSubmit}
         className="max-w-2xl space-y-6"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
       >
         {/* Catégorie */}
         <div>
@@ -184,7 +186,7 @@ const AjouterCandidat = () => {
                 disabled={loading}
                 className={`flex-1 py-3 rounded-lg text-sm font-semibold uppercase tracking-wider transition-all ${
                   form.categorie === cat 
-                    ? "gold-gradient text-primary-foreground" 
+                    ? "bg-gradient-to-r from-amber-500 to-yellow-500 text-white shadow-lg" 
                     : "bg-secondary border border-border text-muted-foreground hover:border-primary/50"
                 } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
@@ -194,8 +196,8 @@ const AjouterCandidat = () => {
           </div>
         </div>
 
-        {/* Numéro et Nom */}
-        <div className="grid grid-cols-3 gap-4">
+        {/* Numéro et Nom complet */}
+        <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm text-muted-foreground mb-2">
               Numéro <span className="text-red-500">*</span>
@@ -208,12 +210,13 @@ const AjouterCandidat = () => {
               required
               min="1"
               disabled={loading}
-              className="w-full px-4 py-3 bg-secondary border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
+              placeholder="Ex: 1"
+              className="w-full px-4 py-3 bg-secondary border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
             />
           </div>
           <div>
             <label className="block text-sm text-muted-foreground mb-2">
-              Nom <span className="text-red-500">*</span>
+              Nom complet <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -221,21 +224,9 @@ const AjouterCandidat = () => {
               value={form.nom}
               onChange={handleChange}
               required
-              placeholder="Nom du candidat"
+              placeholder="Nom et prénom du candidat"
               disabled={loading}
-              className="w-full px-4 py-3 bg-secondary border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-muted-foreground mb-2">Prénom</label>
-            <input
-              type="text"
-              name="prenom"
-              value={form.prenom}
-              onChange={handleChange}
-              placeholder="Prénom"
-              disabled={loading}
-              className="w-full px-4 py-3 bg-secondary border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
+              className="w-full px-4 py-3 bg-secondary border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
             />
           </div>
         </div>
@@ -245,26 +236,31 @@ const AjouterCandidat = () => {
           {[1, 2].map((n) => (
             <div key={n}>
               <label className="block text-sm text-muted-foreground mb-2">
-                Photo {n} {n === 1 ? <span className="text-red-500">*</span> : ""}
+                Photo {n} {n === 1 ? <span className="text-red-500">*</span> : <span className="text-muted-foreground/50">(optionnelle)</span>}
               </label>
               <label 
-                className={`flex flex-col items-center justify-center h-40 border-2 border-dashed rounded-lg cursor-pointer transition-colors bg-secondary ${
+                className={`flex flex-col items-center justify-center h-48 border-2 border-dashed rounded-lg cursor-pointer transition-all bg-secondary overflow-hidden ${
                   photoPreviews[`photo${n}`] 
-                    ? 'border-primary' 
-                    : 'border-border hover:border-primary/50'
+                    ? 'border-primary border-solid' 
+                    : 'border-border hover:border-primary/50 hover:bg-secondary/80'
                 } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 {photoPreviews[`photo${n}`] ? (
                   <img 
                     src={photoPreviews[`photo${n}`]} 
                     alt={`Aperçu photo ${n}`}
-                    className="h-full w-full object-cover rounded-lg"
+                    className="h-full w-full object-cover"
                   />
                 ) : (
-                  <>
-                    <Upload size={24} className="text-muted-foreground mb-2" />
-                    <span className="text-xs text-muted-foreground">JPG, PNG (max 5 Mo)</span>
-                  </>
+                  <div className="text-center p-4">
+                    <Upload size={32} className="text-muted-foreground mx-auto mb-2" />
+                    <span className="text-xs text-muted-foreground block">
+                      Cliquez pour uploader
+                    </span>
+                    <span className="text-xs text-muted-foreground/70 block mt-1">
+                      JPG, PNG (max 5 Mo)
+                    </span>
+                  </div>
                 )}
                 <input 
                   type="file" 
@@ -285,13 +281,16 @@ const AjouterCandidat = () => {
           </label>
           <input
             type="url"
-            name="video_url"
-            value={form.video_url}
+            name="video"
+            value={form.video}
             onChange={handleChange}
-            placeholder="https://youtube.com/watch?v=..."
+            placeholder="https://youtube.com/watch?v=... ou https://facebook.com/..."
             disabled={loading}
-            className="w-full px-4 py-3 bg-secondary border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
+            className="w-full px-4 py-3 bg-secondary border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
           />
+          <p className="text-xs text-muted-foreground mt-1">
+            Lien vers une vidéo YouTube ou Facebook (optionnel)
+          </p>
         </div>
 
         {/* Statut */}
@@ -302,7 +301,7 @@ const AjouterCandidat = () => {
             value={form.statut}
             onChange={handleChange}
             disabled={loading}
-            className="w-full px-4 py-3 bg-secondary border border-border rounded-lg text-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
+            className="w-full px-4 py-3 bg-secondary border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
           >
             <option value="actif">Actif (visible sur le site)</option>
             <option value="inactif">Inactif (caché)</option>
@@ -310,7 +309,7 @@ const AjouterCandidat = () => {
         </div>
 
         {/* Boutons */}
-        <div className="flex gap-3 pt-4">
+        <div className="flex gap-3 pt-6">
           <button 
             type="button" 
             onClick={() => navigate(-1)} 
@@ -322,7 +321,7 @@ const AjouterCandidat = () => {
           <button 
             type="submit" 
             disabled={loading}
-            className="flex-1 gold-gradient text-primary-foreground py-3 rounded-lg font-semibold uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-50"
+            className="flex-1 bg-gradient-to-r from-amber-500 to-yellow-500 text-white py-3 rounded-lg font-semibold uppercase tracking-wider flex items-center justify-center gap-2 hover:from-amber-600 hover:to-yellow-600 transition-all disabled:opacity-50 shadow-lg"
           >
             {loading ? (
               <>
@@ -336,6 +335,10 @@ const AjouterCandidat = () => {
             )}
           </button>
         </div>
+
+        <p className="text-xs text-muted-foreground text-center">
+          <span className="text-red-500">*</span> Champs obligatoires
+        </p>
       </motion.form>
     </div>
   );

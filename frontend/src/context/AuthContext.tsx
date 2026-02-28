@@ -3,7 +3,7 @@
  * -----------------------------------------
  * Fournit l'état d'authentification à toute l'application.
  * Gère le login, logout et la persistance du token.
- * Supporte le mode démo (sans backend).
+ * Connecté au backend Laravel.
  */
 
 import { createContext, useContext, useState, useEffect } from "react";
@@ -19,14 +19,6 @@ export const useAuth = () => {
   return context;
 };
 
-/* Utilisateur démo par défaut */
-const DEMO_USER = {
-  id: 1,
-  nom: "Admin",
-  email: "admin@goldenvibes.com",
-  role: "super_admin",
-};
-
 /* Fournisseur du contexte */
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -35,17 +27,17 @@ export const AuthProvider = ({ children }) => {
   /* Vérifier si un token existe au chargement */
   useEffect(() => {
     const token = localStorage.getItem("token");
+
     if (token) {
-      /* Mode démo : si le token est "demo-token", on utilise l'utilisateur démo */
-      if (token === "demo-token") {
-        setUser(DEMO_USER);
-        setLoading(false);
-        return;
-      }
-      /* Mode production : récupérer le profil depuis l'API */
       getProfile()
-        .then((data) => setUser(data.user))
-        .catch(() => localStorage.removeItem("token"))
+        .then((data) => {
+          setUser(data.user || data);
+        })
+        .catch((error) => {
+          console.error("Erreur récupération profil:", error);
+          localStorage.removeItem("token");
+          setUser(null);
+        })
         .finally(() => setLoading(false));
     } else {
       setLoading(false);
@@ -54,31 +46,61 @@ export const AuthProvider = ({ children }) => {
 
   /* Connexion */
   const login = async (email, password) => {
-    /* Mode démo */
-    if (email === "admin@goldenvibes.com" && password === "admin123") {
-      localStorage.setItem("token", "demo-token");
-      setUser(DEMO_USER);
-      return { token: "demo-token", user: DEMO_USER };
+    try {
+      const data = await loginAPI(email, password);
+
+      if (data.token) {
+        localStorage.setItem("token", data.token);
+        setUser(data.user);
+        return data;
+      } else {
+        throw new Error("Token manquant dans la réponse");
+      }
+    } catch (error) {
+      console.error("Erreur login:", error);
+      throw error;
     }
-    /* Mode production */
-    const data = await loginAPI(email, password);
-    localStorage.setItem("token", data.token);
-    setUser(data.user);
-    return data;
   };
 
   /* Déconnexion */
   const logout = async () => {
     const token = localStorage.getItem("token");
-    if (token !== "demo-token") {
-      await logoutAPI().catch(() => {});
+
+    if (token) {
+      try {
+        await logoutAPI();
+      } catch (error) {
+        console.error("Erreur logout API:", error);
+      }
     }
+
     localStorage.removeItem("token");
     setUser(null);
   };
 
+  /* Rafraîchir le profil utilisateur */
+  const refreshProfile = async () => {
+    const token = localStorage.getItem("token");
+
+    if (token) {
+      try {
+        const data = await getProfile();
+        setUser(data.user || data);
+      } catch (error) {
+        console.error("Erreur refresh profile:", error);
+      }
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{
+      user,
+      loading,
+      login,
+      logout,
+      refreshProfile,
+      isAuthenticated: !!user
+    }}>
       {children}
     </AuthContext.Provider>
   );

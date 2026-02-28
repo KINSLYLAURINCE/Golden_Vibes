@@ -48,7 +48,9 @@ const Login = () => {
         <div className="text-center mb-8">
           <img src={logo} alt="Golden Vibes" className="h-20 w-auto mx-auto mb-4" />
           <h1 className="font-display text-2xl gold-text">Administration</h1>
-          <p className="text-sm text-muted-foreground mt-1">Connectez-vous pour accéder au panneau d'administration</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Connectez-vous pour accéder au panneau d'administration
+          </p>
         </div>
 
         {/* Formulaire */}
@@ -67,7 +69,7 @@ const Login = () => {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@goldenvibes.com"
+                placeholder="admin2@goldenvibes.com"
                 required
                 className="w-full pl-10 pr-4 py-3 bg-secondary border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
               />
@@ -112,7 +114,7 @@ const Login = () => {
           </button>
 
           <p className="text-xs text-center text-muted-foreground">
-            Démo : admin@goldenvibes.com / admin123
+            Démo : admin2@goldenvibes.com / password
           </p>
         </form>
       </motion.div>
