@@ -3,52 +3,134 @@
  * -----------------------------------------
  * Vue d'ensemble avec statistiques en temps réel :
  * candidats, votes, billetterie, messages.
- * Graphiques d'évolution et top candidats.
  */
 
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Users, Crown, Ticket, MessageSquare, TrendingUp, DollarSign } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { Users, Crown, Ticket, MessageSquare, TrendingUp, DollarSign, Loader2 } from "lucide-react";
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, PieChart, Pie, Cell
+} from "recharts";
+import axios from "axios";
 
-/* Données simulées pour le tableau de bord */
-const statsCards = [
-  { label: "Total Candidats", value: "8", detail: "5 Miss · 3 Master", icon: Users, couleur: "text-primary" },
-  { label: "Total Votes", value: "1 768", detail: "176 800 FCFA collectés", icon: Crown, couleur: "text-primary" },
-  { label: "Billets Vendus", value: "237", detail: "1 890 000 FCFA revenus", icon: Ticket, couleur: "text-primary" },
-  { label: "Messages", value: "12", detail: "3 non lus", icon: MessageSquare, couleur: "text-destructive" },
-  { label: "Votes Aujourd'hui", value: "45", detail: "4 500 FCFA", icon: TrendingUp, couleur: "text-primary" },
-  { label: "Revenus Totaux", value: "2 066 800", detail: "Votes + Billets", icon: DollarSign, couleur: "text-primary" },
-];
+const API_URL = "http://localhost:1002/api";
 
-/* Top 5 des candidats */
-const topCandidats = [
-  { nom: "Fotso Mireille", votes: 312, categorie: "Miss" },
-  { nom: "Tchamba Kevin", votes: 278, categorie: "Master" },
-  { nom: "Nguemo Tatiana", votes: 245, categorie: "Miss" },
-  { nom: "Djomo Patrick", votes: 223, categorie: "Master" },
-  { nom: "Nkwenti Divine", votes: 198, categorie: "Miss" },
-];
-
-/* Données pour le graphique d'évolution des votes */
-const evolutionVotes = [
-  { jour: "Lun", votes: 45 },
-  { jour: "Mar", votes: 78 },
-  { jour: "Mer", votes: 62 },
-  { jour: "Jeu", votes: 95 },
-  { jour: "Ven", votes: 120 },
-  { jour: "Sam", votes: 88 },
-  { jour: "Dim", votes: 56 },
-];
-
-/* Données pour le camembert des packs */
-const ventesParPack = [
-  { nom: "VIP", valeur: 38, couleur: "#FFD700" },
-  { nom: "Gold", valeur: 67, couleur: "#B8860B" },
-  { nom: "Standard", valeur: 120, couleur: "#666" },
-  { nom: "Groupe", valeur: 12, couleur: "#444" },
-];
+const COLORS_PIE = ["#FFD700", "#B8860B", "#666", "#444", "#333"];
 
 const Dashboard = () => {
+  const [stats, setStats] = useState(null);
+  const [statsVotes, setStatsVotes] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [periode, setPeriode] = useState("7j");
+
+  const token = localStorage.getItem("token");
+  const axiosConfig = {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+    },
+  };
+
+  /* Charger les stats principales */
+  const fetchStats = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/admin/stats`, axiosConfig);
+      setStats(response.data.data || response.data);
+    } catch (err) {
+      console.error("Erreur stats:", err);
+    }
+  };
+
+  /* Charger les stats votes */
+  const fetchStatsVotes = async (p = periode) => {
+    try {
+      const response = await axios.get(`${API_URL}/admin/stats/votes?periode=${p}`, axiosConfig);
+      setStatsVotes(response.data.data || response.data);
+    } catch (err) {
+      console.error("Erreur stats votes:", err);
+    }
+  };
+
+  useEffect(() => {
+    const init = async () => {
+      setLoading(true);
+      await Promise.all([fetchStats(), fetchStatsVotes()]);
+      setLoading(false);
+    };
+    init();
+  }, []);
+
+  useEffect(() => {
+    fetchStatsVotes(periode);
+  }, [periode]);
+
+  /* Formatter l'évolution pour le graphique */
+  const evolutionData = statsVotes?.evolution?.map((e) => ({
+    jour: new Date(e.date).toLocaleDateString("fr-FR", { weekday: "short" }),
+    votes: e.votes,
+  })) || [];
+
+  /* Formatter les packs pour le camembert */
+  const ventesPackData = statsVotes?.par_candidat?.slice(0, 5).map((c, i) => ({
+    nom: c.nom,
+    valeur: c.total_votes || 0,
+    couleur: COLORS_PIE[i],
+  })) || [];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-32">
+        <Loader2 size={40} className="animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  const statsCards = [
+    {
+      label: "Total Candidats",
+      value: stats?.total_candidats ?? "—",
+      detail: `${stats?.total_candidats_miss ?? 0} Miss · ${stats?.total_candidats_master ?? 0} Master`,
+      icon: Users,
+      couleur: "text-primary",
+    },
+    {
+      label: "Total Votes",
+      value: Number(stats?.total_votes ?? 0).toLocaleString(),
+      detail: `${Number(stats?.montant_votes ?? 0).toLocaleString()} FCFA collectés`,
+      icon: Crown,
+      couleur: "text-primary",
+    },
+    {
+      label: "Billets Vendus",
+      value: Number(stats?.billets_vendus ?? 0).toLocaleString(),
+      detail: `${Number(stats?.revenus_billets ?? 0).toLocaleString()} FCFA revenus`,
+      icon: Ticket,
+      couleur: "text-primary",
+    },
+    {
+      label: "Messages",
+      value: stats?.messages_non_lus ?? "—",
+      detail: `${stats?.messages_non_lus ?? 0} non lu(s)`,
+      icon: MessageSquare,
+      couleur: stats?.messages_non_lus > 0 ? "text-destructive" : "text-primary",
+    },
+    {
+      label: "Revenus Votes",
+      value: Number(stats?.montant_votes ?? 0).toLocaleString(),
+      detail: "FCFA",
+      icon: TrendingUp,
+      couleur: "text-primary",
+    },
+    {
+      label: "Revenus Totaux",
+      value: Number((stats?.montant_votes ?? 0) + (stats?.revenus_billets ?? 0)).toLocaleString(),
+      detail: "Votes + Billets",
+      icon: DollarSign,
+      couleur: "text-primary",
+    },
+  ];
+
   return (
     <div>
       <h1 className="font-display text-3xl gold-text mb-2">Tableau de Bord</h1>
@@ -78,66 +160,107 @@ const Dashboard = () => {
 
       {/* Graphiques */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+
         {/* Évolution des votes */}
         <div className="bg-card border border-border rounded-xl p-6">
-          <h3 className="font-display text-lg text-foreground mb-4">Évolution des Votes (7 jours)</h3>
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={evolutionVotes}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(0 0% 20%)" />
-              <XAxis dataKey="jour" stroke="hsl(0 0% 60%)" fontSize={12} />
-              <YAxis stroke="hsl(0 0% 60%)" fontSize={12} />
-              <Tooltip
-                contentStyle={{ backgroundColor: "hsl(0 0% 8%)", border: "1px solid hsl(43 30% 20%)", borderRadius: "8px" }}
-                labelStyle={{ color: "hsl(0 0% 95%)" }}
-              />
-              <Bar dataKey="votes" fill="hsl(43 72% 55%)" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-display text-lg text-foreground">Évolution des Votes</h3>
+            <div className="flex gap-1">
+              {["7j", "30j", "all"].map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setPeriode(p)}
+                  className={`text-xs px-3 py-1 rounded-full border transition-colors ${
+                    periode === p
+                      ? "border-primary bg-primary/20 text-primary"
+                      : "border-border text-muted-foreground hover:border-primary/50"
+                  }`}
+                >
+                  {p === "all" ? "Tout" : p}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {evolutionData.length === 0 ? (
+            <div className="flex items-center justify-center h-[250px] text-muted-foreground text-sm">
+              Aucune donnée disponible
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={evolutionData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(0 0% 20%)" />
+                <XAxis dataKey="jour" stroke="hsl(0 0% 60%)" fontSize={12} />
+                <YAxis stroke="hsl(0 0% 60%)" fontSize={12} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "hsl(0 0% 8%)",
+                    border: "1px solid hsl(43 30% 20%)",
+                    borderRadius: "8px",
+                  }}
+                  labelStyle={{ color: "hsl(0 0% 95%)" }}
+                />
+                <Bar dataKey="votes" fill="hsl(43 72% 55%)" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
 
-        {/* Ventes par pack */}
+        {/* Votes par candidat (camembert) */}
         <div className="bg-card border border-border rounded-xl p-6">
-          <h3 className="font-display text-lg text-foreground mb-4">Ventes par Pack</h3>
-          <ResponsiveContainer width="100%" height={250}>
-            <PieChart>
-              <Pie
-                data={ventesParPack}
-                cx="50%"
-                cy="50%"
-                outerRadius={80}
-                dataKey="valeur"
-                nameKey="nom"
-                label={({ nom, valeur }) => `${nom}: ${valeur}`}
-              >
-                {ventesParPack.map((entry, index) => (
-                  <Cell key={index} fill={entry.couleur} />
-                ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
+          <h3 className="font-display text-lg text-foreground mb-4">Votes par Candidat</h3>
+          {ventesPackData.length === 0 ? (
+            <div className="flex items-center justify-center h-[250px] text-muted-foreground text-sm">
+              Aucune donnée disponible
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={250}>
+              <PieChart>
+                <Pie
+                  data={ventesPackData}
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={80}
+                  dataKey="valeur"
+                  nameKey="nom"
+                  label={({ nom, valeur }) => `${nom.split(" ")[0]}: ${valeur}`}
+                >
+                  {ventesPackData.map((entry, index) => (
+                    <Cell key={index} fill={entry.couleur} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
 
       {/* Top 5 Candidats */}
       <div className="bg-card border border-border rounded-xl p-6">
         <h3 className="font-display text-lg text-foreground mb-4">🏆 Top 5 Candidats</h3>
-        <div className="space-y-3">
-          {topCandidats.map((c, i) => (
-            <div key={c.nom} className="flex items-center gap-4 p-3 bg-secondary rounded-lg">
-              <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                i === 0 ? "gold-gradient text-primary-foreground" : "bg-muted text-muted-foreground"
-              }`}>
-                {i + 1}
-              </span>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-foreground">{c.nom}</p>
-                <p className="text-xs text-muted-foreground">{c.categorie}</p>
+        {!stats?.top_candidats || stats.top_candidats.length === 0 ? (
+          <p className="text-muted-foreground text-sm text-center py-6">Aucun candidat pour l'instant.</p>
+        ) : (
+          <div className="space-y-3">
+            {stats.top_candidats.map((c, i) => (
+              <div key={c.id} className="flex items-center gap-4 p-3 bg-secondary rounded-lg">
+                <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
+                  i === 0 ? "gold-gradient text-primary-foreground" : "bg-muted text-muted-foreground"
+                }`}>
+                  {i + 1}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">{c.nom}</p>
+                  <p className="text-xs text-muted-foreground">N° {c.numero}</p>
+                </div>
+                <span className="text-primary font-bold shrink-0">
+                  {Number(c.votes_count ?? 0).toLocaleString()} votes
+                </span>
               </div>
-              <span className="text-primary font-bold">{c.votes} votes</span>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
