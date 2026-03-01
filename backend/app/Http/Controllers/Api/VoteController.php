@@ -74,23 +74,47 @@ class VoteController extends Controller
      */
     public function callbackNotchPay(Request $request)
     {
-        Log::info('NotchPay Webhook', $request->all());
+        Log::info('NotchPay Webhook Vote', $request->all());
 
         $reference = $request->input('reference');
-        $status = $request->input('status'); // complete, failed, pending
-        $transactionId = $request->input('transaction.reference'); // Notre ID
+        $status = $request->input('transaction.status'); // ← CORRIGÉ
+        $transactionId = $request->input('transaction.reference');
 
-        // Vérifier avec l'API NotchPay (double check sécurité)
-        $verification = $this->notchpay->verifyPayment($reference);
-
-        if (!$verification) {
-            return response()->json(['error' => 'Vérification impossible'], 500);
-        }
-
+        // Chercher le vote
         $vote = Vote::where('transaction_id', $transactionId)->first();
 
         if (!$vote) {
+            Log::error('Vote non trouvé', ['transaction_id' => $transactionId]);
             return response()->json(['error' => 'Vote non trouvé'], 404);
+        }
+
+        // MODE SANDBOX : Accepter directement
+        if (config('services.notchpay.mode') === 'sandbox') {
+            Log::warning('Mode SANDBOX - Validation sans vérification NotchPay');
+            
+            if ($status === 'complete') {
+                // ✅ PAIEMENT VALIDÉ
+                $vote->update(['statut' => 'valide']);
+
+                $candidat = Candidat::find($vote->candidat_id);
+                $candidat->increment('votes_count', $vote->nombre_votes);
+
+                Log::info('Vote validé (SANDBOX)', ['transaction' => $transactionId]);
+
+                return response()->json(['success' => true, 'mode' => 'sandbox']);
+            }
+
+            // Status failed
+            $vote->update(['statut' => 'echoue']);
+            return response()->json(['success' => false]);
+        }
+
+        // MODE PRODUCTION : Vérification réelle
+        $verification = $this->notchpay->verifyPayment($reference);
+
+        if (!$verification) {
+            Log::error('Vérification NotchPay impossible', ['reference' => $reference]);
+            return response()->json(['error' => 'Vérification impossible'], 500);
         }
 
         if ($verification['status'] === 'complete') {
@@ -100,9 +124,9 @@ class VoteController extends Controller
             $candidat = Candidat::find($vote->candidat_id);
             $candidat->increment('votes_count', $vote->nombre_votes);
 
-            Log::info('Vote validé', ['transaction' => $transactionId]);
+            Log::info('Vote validé (PRODUCTION)', ['transaction' => $transactionId]);
 
-            return response()->json(['success' => true]);
+            return response()->json(['success' => true, 'mode' => 'production']);
         }
 
         if ($verification['status'] === 'failed') {

@@ -1182,18 +1182,109 @@ SESSION_DOMAIN=votre-domaine.com
 
 ---
 
-## 📝 PROCHAINES ÉTAPES
+## 📧 ENVOI D'EMAILS
 
-### À implémenter
+### Configuration SMTP (Gmail)
 
-- [ ] **Seeders** - Données de test
-- [ ] **API Paiement Orange Money** - Intégration réelle
-- [ ] **API Paiement MTN Money** - Intégration réelle
-- [ ] **Génération QR Codes** - Pour billets
-- [ ] **Envoi emails** - Confirmation votes/billets
-- [ ] **Envoi SMS** - Notifications
-- [ ] **Tests unitaires** - PHPUnit
-- [ ] **API Documentation** - Swagger/OpenAPI
+**Fichier `.env` :**
+```env
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=votre-email@gmail.com
+MAIL_PASSWORD=votre-mot-de-passe-application
+MAIL_ENCRYPTION=tls
+MAIL_FROM_ADDRESS=votre-email@gmail.com
+MAIL_FROM_NAME="Golden Vibes Events"
+```
+
+**Créer mot de passe application Google :**
+1. https://myaccount.google.com/apppasswords
+2. Créer une application "Laravel Golden Vibes"
+3. Copier le mot de passe (16 caractères)
+4. Mettre dans `.env`
+
+### Emails envoyés automatiquement
+
+**Après achat billet validé :**
+- Email avec code billet unique
+- Infos pack, montant, date événement
+- Instructions pour le jour J
+
+**Template :** `resources/views/emails/billet-confirmation.blade.php`
+
+---
+
+## 🎟️ SYSTÈME DE VALIDATION BILLETS (Jour J)
+
+### Principe
+
+**Pas de QR Code, juste un CODE simple !**
+
+1. Client reçoit code par email (ex: `QR-ABC123XYZ456`)
+2. Jour J → Client présente le code
+3. Agent tape le code dans l'app admin
+4. Validation temps réel en BDD
+5. Accès autorisé ou refusé
+
+### Endpoints validation
+
+**Valider un billet :**
+```
+POST /api/admin/billets/valider
+Headers: Authorization: Bearer {token}
+Body: { "code": "QR-ABC123XYZ456" }
+```
+
+**Réponses possibles :**
+- ✅ Code valide → Accès autorisé
+- ⚠️ Déjà utilisé → Refusé (avec date/heure première utilisation)
+- ❌ Code invalide → Refusé
+- ❌ Paiement non validé → Refusé
+
+**Stats temps réel :**
+```
+GET /api/admin/billets/stats-entrees
+→ Total vendus, total entrés, en attente, taux de présence
+```
+
+### Sécurité
+
+- ✅ Code unique par billet (impossible de deviner)
+- ✅ Vérification temps réel BDD
+- ✅ Impossible de réutiliser (marqué "utilisé")
+- ✅ Traçabilité (qui, quand, par quel agent)
+- ✅ Logs de toutes les tentatives
+
+---
+
+## ✅ ÉTAT DU PROJET
+
+### Terminé et fonctionnel
+
+- ✅ **Base de données** - 9 tables avec relations
+- ✅ **Seeders** - Données de test
+- ✅ **API Complète** - Routes publiques + admin
+- ✅ **Authentification** - Sanctum avec tokens
+- ✅ **Upload fichiers** - Photos candidats, partenaires, événements
+- ✅ **Paiement NotchPay** - Sandbox fonctionnel
+- ✅ **Webhooks** - Validation automatique paiements
+- ✅ **Emails** - Confirmation billets avec code
+- ✅ **Validation billets** - Système jour J
+- ✅ **Stats temps réel** - Dashboard complet
+- ✅ **Documentation** - README, guides, Postman
+
+### En attente
+
+- ⏳ **Validation compte NotchPay production** (24-48h)
+- ⏳ **Frontend React** (développement par collaborateur)
+
+### Optionnel (améliorations futures)
+
+- [ ] Notifications SMS
+- [ ] Export Excel ventes
+- [ ] Tests unitaires PHPUnit
+- [ ] API Documentation Swagger
 
 ---
 
