@@ -24,8 +24,8 @@ import wizdomOg        from "@/assets/artists/wizdom-og.jpg";
 import karlixGyal      from "@/assets/artists/karlix-gyal.jpg";
 import artisteSurprise from "@/assets/artists/artiste-surprise.jpg";
 
-const API_URL     = "http://localhost:1002/api";
-const STORAGE_URL = "http://localhost:1002/storage";
+const API_URL     = "http://localhost:8000/api";
+const STORAGE_URL = "http://localhost:8000/storage";
 
 const getPhotoUrl = (photo: unknown): string | null => {
   if (!photo) return null;

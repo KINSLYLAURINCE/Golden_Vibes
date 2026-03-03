@@ -116,4 +116,39 @@ class PartenaireAdminController extends Controller
             'message' => 'Partenaire supprimé avec succès'
         ]);
     }
+
+    /**
+     * Afficher un partenaire spécifique
+     * GET /api/admin/partenaires/{id}
+     */
+    public function show($id)
+    {
+        $partenaire = Partenaire::findOrFail($id);
+        
+        return response()->json([
+            'success' => true,
+            'data' => $partenaire
+        ]);
+    }
+
+    /**
+     * Changer le statut d'un partenaire
+     * PATCH /api/admin/partenaires/{id}/statut
+     */
+    public function toggleStatut($id)
+    {
+        $partenaire = Partenaire::findOrFail($id);
+        
+        $nouveauStatut = $partenaire->statut === 'actif' ? 'inactif' : 'actif';
+        
+        $partenaire->update([
+            'statut' => $nouveauStatut
+        ]);
+        
+        return response()->json([
+            'success' => true,
+            'data' => $partenaire,
+            'message' => "Partenaire {$nouveauStatut}"
+        ]);
+    }
 }

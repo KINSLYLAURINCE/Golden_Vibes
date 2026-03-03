@@ -4,8 +4,8 @@ import { motion } from "framer-motion";
 import { Phone, CheckCircle, Loader2, Crown, Heart } from "lucide-react";
 import axios from "axios";
 
-const API_URL = "http://localhost:1002/api";
-const STORAGE_URL = "http://localhost:1002/storage";
+const API_URL = "http://localhost:8000/api";
+const STORAGE_URL = "http://localhost:8000/storage";
 
 const getPhotoUrl = (photo: string) => {
   if (!photo) return null;

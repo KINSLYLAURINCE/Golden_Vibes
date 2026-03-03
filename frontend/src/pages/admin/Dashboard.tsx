@@ -14,7 +14,7 @@ import {
 } from "recharts";
 import axios from "axios";
 
-const API_URL = "http://localhost:1002/api";
+const API_URL = "http://localhost:8000/api";
 
 const COLORS_PIE = ["#FFD700", "#B8860B", "#666", "#444", "#333"];
 
