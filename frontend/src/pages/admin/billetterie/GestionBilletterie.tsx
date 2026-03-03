@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Edit, Trash2, X, Save, Package, ShoppingCart, Loader2 } from "lucide-react";
 import axios from "axios";
 
-const API_URL = "http://localhost:1002/api";
+const API_URL = "http://localhost:8000/api";
 
 const emptyForm = {
   nom: "",

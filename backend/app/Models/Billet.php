@@ -17,12 +17,25 @@ class Billet extends Model
         'transaction_id',
         'qr_code',
         'statut_paiement',
-        'statut_billet'
+        'statut_billet',
+        'validated_by',      // ← AJOUTER
+        'validated_at'       // ← AJOUTER
     ];
 
-    // Relation : Un billet appartient à un pack
+    protected $casts = [
+        'validated_at' => 'datetime'  // ← AJOUTER
+    ];
+
     public function pack()
     {
         return $this->belongsTo(Pack::class);
+    }
+
+    /**
+     * Agent qui a validé le billet
+     */
+    public function validator()
+    {
+        return $this->belongsTo(User::class, 'validated_by');
     }
 }

@@ -23,8 +23,8 @@ interface Partner {
 }
 
 // ─── Config ──────────────────────────────────────────────────────────────────
-const API_URL     = "http://localhost:1002/api";
-const STORAGE_URL = "http://localhost:1002/storage";
+const API_URL     = "http://localhost:8000/api";
+const STORAGE_URL = "http://localhost:8000/storage";
 
 const getLogoUrl = (logo: string) => {
   if (!logo) return null;

@@ -10,7 +10,7 @@ import { motion } from "framer-motion";
 import { Mail, MailOpen, Trash2, Star, Search, Reply, Loader2 } from "lucide-react";
 import axios from "axios";
 
-const API_URL = "http://localhost:1002/api";
+const API_URL = "http://localhost:8000/api";
 
 const OBJETS_LABELS = {
   candidature: "Candidature",
