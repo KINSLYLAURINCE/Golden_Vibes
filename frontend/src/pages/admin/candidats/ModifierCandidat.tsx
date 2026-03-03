@@ -11,8 +11,8 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Upload, Save, Loader2 } from "lucide-react";
 import axios from "axios";
 
-const API_URL = "http://localhost:1002/api";
-const STORAGE_URL = "http://localhost:1002/storage";
+const API_URL = "http://localhost:8000/api";
+const STORAGE_URL = "http://localhost:8000/storage";
 
 const ModifierCandidat = () => {
   const { id } = useParams();

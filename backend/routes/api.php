@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\Admin\EvenementAdminController;
 use App\Http\Controllers\Api\Admin\PartenaireAdminController;
 use App\Http\Controllers\Api\Admin\PackAdminController;
 use App\Http\Controllers\Api\Admin\MessageController;
+use App\Http\Controllers\Api\Admin\BilletValidationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -43,7 +44,6 @@ Route::get('/candidats/{id}/votes', [CandidatController::class, 'votes']);
 
 // Votes
 Route::post('/votes', [VoteController::class, 'store']);
-Route::post('/votes/callback', [VoteController::class, 'callback']); // Webhook paiement
 // Callback NotchPay (webhook)
 Route::post('/votes/callback/notchpay', [VoteController::class, 'callbackNotchPay']);
 // Webhook NotchPay pour billets
@@ -88,20 +88,25 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Gestion Candidats
     Route::get('/admin/candidats', [CandidatAdminController::class, 'index']);
+    Route::get('/admin/candidats/{id}', [CandidatAdminController::class, 'show']);
     Route::post('/admin/candidats', [CandidatAdminController::class, 'store']);
     Route::post('/admin/candidats/{id}', [CandidatAdminController::class, 'update']); // POST car FormData
+    Route::patch('/admin/candidats/{id}/statut', [CandidatAdminController::class, 'toggleStatut']);
     Route::delete('/admin/candidats/{id}', [CandidatAdminController::class, 'destroy']);
 
     // Gestion Événements
     Route::get('/admin/evenements', [EvenementAdminController::class, 'index']);
+    Route::get('/admin/evenements/{id}', [EvenementAdminController::class, 'show']);
     Route::post('/admin/evenements', [EvenementAdminController::class, 'store']);
     Route::post('/admin/evenements/{id}', [EvenementAdminController::class, 'update']);
     Route::delete('/admin/evenements/{id}', [EvenementAdminController::class, 'destroy']);
 
     // Gestion Partenaires
     Route::get('/admin/partenaires', [PartenaireAdminController::class, 'index']);
+    Route::get('/admin/partenaires/{id}', [PartenaireAdminController::class, 'show']);
     Route::post('/admin/partenaires', [PartenaireAdminController::class, 'store']);
     Route::post('/admin/partenaires/{id}', [PartenaireAdminController::class, 'update']);
+    Route::patch('/admin/partenaires/{id}/statut', [PartenaireAdminController::class, 'toggleStatut']);
     Route::delete('/admin/partenaires/{id}', [PartenaireAdminController::class, 'destroy']);
 
     // Gestion Billetterie
@@ -117,4 +122,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // nouvellement ajouter pour les stats détaillées
     Route::get('/stats', [StatsController::class, 'index']);
+
+    // Validation billets (Jour de l'événement)
+    Route::post('/admin/billets/valider', [BilletValidationController::class, 'valider']);
+    Route::get('/admin/billets/stats-entrees', [BilletValidationController::class, 'statsEntrees']);
+    Route::get('/admin/billets/valides', [BilletValidationController::class, 'listeValides']); // ← AJOUTER
 });

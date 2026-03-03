@@ -124,6 +124,20 @@ class CandidatAdminController extends Controller
         ]);
     }
 
+    /**
+     * Afficher un candidat spécifique
+     * GET /api/admin/candidats/{id}
+     */
+    public function show($id)
+    {
+        $candidat = Candidat::findOrFail($id);
+        
+        return response()->json([
+            'success' => true,
+            'data' => $candidat
+        ]);
+    }
+
     // DELETE /api/admin/candidats/{id}
     public function destroy($id)
     {
@@ -148,6 +162,28 @@ class CandidatAdminController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Candidat supprimé avec succès'
+        ]);
+    }
+
+    /**
+     * Changer le statut d'un candidat (actif/inactif)
+     * PATCH /api/admin/candidats/{id}/statut
+     */
+    public function toggleStatut($id)
+    {
+        $candidat = Candidat::findOrFail($id);
+        
+        // Inverser le statut
+        $nouveauStatut = $candidat->statut === 'actif' ? 'inactif' : 'actif';
+        
+        $candidat->update([
+            'statut' => $nouveauStatut
+        ]);
+        
+        return response()->json([
+            'success' => true,
+            'data' => $candidat,
+            'message' => "Candidat {$nouveauStatut}"
         ]);
     }
 }

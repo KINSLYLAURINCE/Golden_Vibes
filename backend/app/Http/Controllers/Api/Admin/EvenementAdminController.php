@@ -122,6 +122,19 @@ class EvenementAdminController extends Controller
         ]);
     }
 
+    /**
+     * Afficher un événement spécifique
+     */
+    public function show($id)
+    {
+        $evenement = Evenement::with('photos')->findOrFail($id);
+        
+        return response()->json([
+            'success' => true,
+            'data' => $evenement
+        ]);
+    }
+
     // DELETE /api/admin/evenements/{id}
     public function destroy($id)
     {

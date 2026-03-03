@@ -24,7 +24,11 @@ return new class extends Migration
             $table->string('qr_code')->unique();
             $table->enum('statut_paiement', ['en_attente', 'valide', 'echoue'])->default('en_attente');
             $table->enum('statut_billet', ['valide', 'utilise', 'annule'])->default('valide');
+            $table->unsignedBigInteger('validated_by')->nullable();
+            $table->timestamp('validated_at')->nullable();
             $table->timestamps();
+            
+            $table->foreign('validated_by')->references('id')->on('users');
         });
     }
 
