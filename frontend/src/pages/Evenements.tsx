@@ -9,8 +9,8 @@ import { motion } from "framer-motion";
 import { Calendar, MapPin, Clock, Star, X, ChevronLeft, ChevronRight, Image, Loader2 } from "lucide-react";
 import axios from "axios";
 
-const API_URL = "http://localhost:8000/api";
-const STORAGE_URL = "http://localhost:8000/storage";
+const API_URL = "http://localhost:1002/api";
+const STORAGE_URL = "http://localhost:1002/storage";
 
 const getPhotoUrl = (photo) => {
   if (!photo) return null;
