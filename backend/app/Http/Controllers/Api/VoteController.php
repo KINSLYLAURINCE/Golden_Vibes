@@ -70,15 +70,38 @@ class VoteController extends Controller
     }
 
     /**
-     * Webhook NotchPay
+     * Webhook NotchPay pour votes
      */
     public function callbackNotchPay(Request $request)
     {
-        Log::info('NotchPay Webhook Vote', $request->all());
+        Log::info('NotchPay Webhook Vote COMPLET', $request->all());
 
-        $reference = $request->input('reference');
-        $status = $request->input('transaction.status'); // ← CORRIGÉ
-        $transactionId = $request->input('transaction.reference');
+        // NotchPay envoie directement dans "data", pas "payload.data"
+        $data = $request->input('data');
+        
+        if (!$data) {
+            Log::error('Webhook NotchPay Vote - Pas de données');
+            return response()->json(['error' => 'Pas de données'], 400);
+        }
+
+        // Récupérer les infos
+        $transactionId = $data['merchant_reference'] ?? $data['trxref'];
+        $notchpayRef = $data['reference'];
+        $status = $data['status'];
+        $event = $request->input('event'); // payment.complete, payment.created, etc
+
+        Log::info('NotchPay Webhook Vote Parsed', [
+            'event' => $event,
+            'transaction_id' => $transactionId,
+            'notchpay_ref' => $notchpayRef,
+            'status' => $status
+        ]);
+
+        // On traite UNIQUEMENT les événements "complete"
+        if ($event !== 'payment.complete') {
+            Log::info('Event ignoré (pas complete)', ['event' => $event]);
+            return response()->json(['success' => true, 'ignored' => true], 200);
+        }
 
         // Chercher le vote
         $vote = Vote::where('transaction_id', $transactionId)->first();
@@ -88,52 +111,35 @@ class VoteController extends Controller
             return response()->json(['error' => 'Vote non trouvé'], 404);
         }
 
-        // MODE SANDBOX : Accepter directement
-        if (config('services.notchpay.mode') === 'sandbox') {
-            Log::warning('Mode SANDBOX - Validation sans vérification NotchPay');
-            
-            if ($status === 'complete') {
-                // ✅ PAIEMENT VALIDÉ
-                $vote->update(['statut' => 'valide']);
-
-                $candidat = Candidat::find($vote->candidat_id);
-                $candidat->increment('votes_count', $vote->nombre_votes);
-
-                Log::info('Vote validé (SANDBOX)', ['transaction' => $transactionId]);
-
-                return response()->json(['success' => true, 'mode' => 'sandbox']);
-            }
-
-            // Status failed
-            $vote->update(['statut' => 'echoue']);
-            return response()->json(['success' => false]);
+        // Vérifier si déjà validé (éviter double traitement)
+        if ($vote->statut === 'valide') {
+            Log::warning('Vote déjà validé', ['transaction_id' => $transactionId]);
+            return response()->json(['success' => true, 'already_processed' => true], 200);
         }
 
-        // MODE PRODUCTION : Vérification réelle
-        $verification = $this->notchpay->verifyPayment($reference);
-
-        if (!$verification) {
-            Log::error('Vérification NotchPay impossible', ['reference' => $reference]);
-            return response()->json(['error' => 'Vérification impossible'], 500);
-        }
-
-        if ($verification['status'] === 'complete') {
+        // Vérifier le statut
+        if ($status === 'complete') {
             // ✅ PAIEMENT VALIDÉ
+            
             $vote->update(['statut' => 'valide']);
 
             $candidat = Candidat::find($vote->candidat_id);
             $candidat->increment('votes_count', $vote->nombre_votes);
 
-            Log::info('Vote validé (PRODUCTION)', ['transaction' => $transactionId]);
+            Log::info('✅ Vote validé PRODUCTION', [
+                'transaction_id' => $transactionId,
+                'candidat' => $candidat->nom,
+                'votes' => $vote->nombre_votes,
+                'nouveau_total' => $candidat->votes_count
+            ]);
 
-            return response()->json(['success' => true, 'mode' => 'production']);
+            return response()->json([
+                'success' => true,
+                'message' => 'Vote validé'
+            ], 200);
         }
 
-        if ($verification['status'] === 'failed') {
-            // ❌ PAIEMENT ÉCHOUÉ
-            $vote->update(['statut' => 'echoue']);
-        }
-
-        return response()->json(['success' => false]);
+        return response()->json(['success' => false, 'status' => $status], 200);
     }
+    
 }
