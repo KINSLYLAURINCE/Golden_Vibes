@@ -1,8 +1,5 @@
 /**
  * Page Billetterie - Golden Vibes Events
- * -----------------------------------------
- * Affiche les packs depuis l'API.
- * Processus d'achat en 5 étapes avec paiement NotchPay.
  */
 
 import { useState, useEffect } from "react";
@@ -10,13 +7,20 @@ import { motion } from "framer-motion";
 import {
   Ticket, Star, CheckCircle, Phone, Mail, User, Users,
   Crown, Sparkles, Coffee, ChevronLeft, ChevronRight,
-  Download, QrCode, Clock, AlertCircle, CreditCard,
-  Smartphone, Loader2
+  QrCode, Clock, AlertCircle, CreditCard, Smartphone, Loader2, Package
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 
-const API_URL = "http://localhost:8000/api";
+const API_URL = "http://localhost:1002/api";
+const STORAGE_URL = "http://localhost:1002/storage";
+
+const getImageUrl = (image: string | null | undefined) => {
+  if (!image) return null;
+  if (typeof image !== "string") return null;
+  if (image.startsWith("http")) return image;
+  return `${STORAGE_URL}/${image}`;
+};
 
 interface Pack {
   id: number;
@@ -26,6 +30,7 @@ interface Pack {
   places_vendues: number;
   avantages: string[];
   statut: string;
+  image?: string | null;
 }
 
 interface FormData {
@@ -65,14 +70,12 @@ const Billetterie = () => {
   const restant = pack ? pack.places_disponibles - pack.places_vendues : 0;
   const total = pack ? pack.prix * quantite : 0;
 
-  /* Charger les packs */
   useEffect(() => {
     const fetchPacks = async () => {
       setLoadingPacks(true);
       try {
         const response = await axios.get(`${API_URL}/packs`);
         const data = response.data.data || response.data;
-        // Filtrer uniquement les packs en vente
         setPacks(data.filter((p: Pack) => p.statut === "en_vente"));
       } catch (err) {
         console.error("Erreur chargement packs:", err);
@@ -89,7 +92,6 @@ const Billetterie = () => {
     setError("");
   };
 
-  /* Validation formulaire */
   const validateForm = () => {
     if (!formData.nom.trim()) { setError("Le nom est obligatoire."); return false; }
     if (!formData.email.trim() || !/\S+@\S+\.\S+/.test(formData.email)) {
@@ -103,12 +105,10 @@ const Billetterie = () => {
     return true;
   };
 
-  /* Soumettre la commande */
   const handlePayer = async () => {
     if (!validateForm()) return;
     setLoading(true);
     setError("");
-
     try {
       const response = await axios.post(`${API_URL}/billets`, {
         pack_id: selectedPack,
@@ -118,14 +118,11 @@ const Billetterie = () => {
         telephone: formatPhone(formData.telephone),
         mode_paiement: payment,
       });
-
       if (response.data.success) {
         const url = response.data.data?.payment_url;
         const txId = response.data.data?.transaction_id;
         setTransactionId(txId || "");
-
         if (url) {
-          // Redirection vers NotchPay
           window.location.href = url;
         } else {
           setStep(5);
@@ -134,7 +131,6 @@ const Billetterie = () => {
         setError(response.data.message || "Erreur lors du paiement.");
       }
     } catch (err: any) {
-      console.error("Erreur achat billet:", err);
       setError(
         err.response?.data?.message ||
         err.response?.data?.error ||
@@ -207,6 +203,7 @@ const Billetterie = () => {
                   const presqueComplet = rest < p.places_disponibles * 0.1;
                   const PackIcon = PACK_ICONS[p.nom] || Ticket;
                   const avantages = Array.isArray(p.avantages) ? p.avantages : [];
+                  const imageUrl = getImageUrl(p.image);
 
                   return (
                     <motion.div
@@ -226,13 +223,28 @@ const Billetterie = () => {
                         </div>
                       )}
 
-                      {/* Header coloré */}
-                      <div className="gold-gradient p-6 flex items-center justify-between">
-                        <PackIcon size={28} className="text-primary-foreground" />
-                        <span className="text-primary-foreground text-sm font-bold uppercase tracking-wider">
-                          {p.nom}
-                        </span>
-                      </div>
+                      {/* ✅ Image ou header coloré */}
+                      {imageUrl ? (
+                        <div className="w-full h-40 overflow-hidden relative">
+                          <img
+                            src={imageUrl}
+                            alt={p.nom}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            onError={(e: any) => { e.target.style.display = "none"; }}
+                          />
+                          {/* Overlay avec nom du pack */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-3">
+                            <span className="text-white text-sm font-bold uppercase tracking-wider">{p.nom}</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="gold-gradient p-6 flex items-center justify-between">
+                          <PackIcon size={28} className="text-primary-foreground" />
+                          <span className="text-primary-foreground text-sm font-bold uppercase tracking-wider">
+                            {p.nom}
+                          </span>
+                        </div>
+                      )}
 
                       <div className="p-5">
                         <p className="text-3xl font-bold text-primary font-display mb-1">
@@ -240,7 +252,6 @@ const Billetterie = () => {
                           <span className="text-sm font-normal text-muted-foreground ml-1">FCFA</span>
                         </p>
 
-                        {/* Avantages */}
                         {avantages.length > 0 && (
                           <div className="space-y-1.5 mb-4 mt-3">
                             {avantages.slice(0, 4).map((a, idx) => (
@@ -255,7 +266,6 @@ const Billetterie = () => {
                           </div>
                         )}
 
-                        {/* Barre de dispo */}
                         <div className="mt-4">
                           <div className="flex justify-between text-xs mb-1">
                             <span className="text-muted-foreground">{rest} places restantes</span>
@@ -263,9 +273,7 @@ const Billetterie = () => {
                           </div>
                           <div className="h-2 bg-secondary rounded-full overflow-hidden">
                             <div
-                              className={`h-full rounded-full transition-all duration-500 ${
-                                presqueComplet ? "bg-red-500" : "gold-gradient"
-                              }`}
+                              className={`h-full rounded-full transition-all duration-500 ${presqueComplet ? "bg-red-500" : "gold-gradient"}`}
                               style={{ width: `${pct}%` }}
                             />
                           </div>
@@ -297,53 +305,71 @@ const Billetterie = () => {
         {/* ── ÉTAPE 2 : Quantité ── */}
         {step === 2 && pack && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-lg mx-auto">
-            <div className="bg-card rounded-xl border border-border p-6 mb-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="font-display text-2xl text-foreground">{pack.nom}</h2>
-                <button onClick={() => setStep(1)} className="text-xs text-muted-foreground hover:text-primary underline">
-                  Changer
-                </button>
-              </div>
+            <div className="bg-card rounded-xl border border-border overflow-hidden mb-6">
 
-              <div className="flex items-center justify-between p-4 bg-secondary rounded-lg mb-6">
-                <span className="text-foreground">Prix unitaire</span>
-                <span className="text-xl font-bold text-primary">{Number(pack.prix).toLocaleString()} FCFA</span>
-              </div>
+              {/* Image ou header */}
+              {getImageUrl(pack.image) ? (
+                <div className="w-full h-36 overflow-hidden">
+                  <img
+                    src={getImageUrl(pack.image)!}
+                    alt={pack.nom}
+                    className="w-full h-full object-cover"
+                    onError={(e: any) => { e.target.style.display = "none"; }}
+                  />
+                </div>
+              ) : (
+                <div className="gold-gradient p-4 flex items-center gap-3">
+                  <Package size={24} className="text-primary-foreground" />
+                  <span className="text-primary-foreground font-bold uppercase">{pack.nom}</span>
+                </div>
+              )}
 
-              <div>
-                <label className="block text-sm text-muted-foreground mb-2">
-                  Nombre de billets (max {restant})
-                </label>
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setQuantite(Math.max(1, quantite - 1))}
-                    disabled={quantite <= 1}
-                    className="w-10 h-10 rounded-lg border border-border flex items-center justify-center hover:bg-primary/10 transition-colors disabled:opacity-40"
-                  >
-                    -
-                  </button>
-                  <div className="flex-1 text-center">
-                    <span className="text-2xl font-bold text-foreground">{quantite}</span>
-                    <span className="text-sm text-muted-foreground ml-1">billet(s)</span>
-                  </div>
-                  <button
-                    onClick={() => setQuantite(Math.min(restant, quantite + 1))}
-                    disabled={quantite >= restant}
-                    className="w-10 h-10 rounded-lg border border-border flex items-center justify-center hover:bg-primary/10 transition-colors disabled:opacity-40"
-                  >
-                    +
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="font-display text-2xl text-foreground">{pack.nom}</h2>
+                  <button onClick={() => setStep(1)} className="text-xs text-muted-foreground hover:text-primary underline">
+                    Changer
                   </button>
                 </div>
-                {quantite >= restant && (
-                  <p className="text-xs text-red-500 mt-2">
-                    Plus que {restant} place(s) disponible(s)
-                  </p>
-                )}
-              </div>
 
-              <div className="mt-6 pt-6 border-t border-border flex justify-between items-center">
-                <span className="text-foreground">Total</span>
-                <span className="text-2xl font-bold gold-text">{total.toLocaleString()} FCFA</span>
+                <div className="flex items-center justify-between p-4 bg-secondary rounded-lg mb-6">
+                  <span className="text-foreground">Prix unitaire</span>
+                  <span className="text-xl font-bold text-primary">{Number(pack.prix).toLocaleString()} FCFA</span>
+                </div>
+
+                <div>
+                  <label className="block text-sm text-muted-foreground mb-2">
+                    Nombre de billets (max {restant})
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setQuantite(Math.max(1, quantite - 1))}
+                      disabled={quantite <= 1}
+                      className="w-10 h-10 rounded-lg border border-border flex items-center justify-center hover:bg-primary/10 transition-colors disabled:opacity-40"
+                    >
+                      -
+                    </button>
+                    <div className="flex-1 text-center">
+                      <span className="text-2xl font-bold text-foreground">{quantite}</span>
+                      <span className="text-sm text-muted-foreground ml-1">billet(s)</span>
+                    </div>
+                    <button
+                      onClick={() => setQuantite(Math.min(restant, quantite + 1))}
+                      disabled={quantite >= restant}
+                      className="w-10 h-10 rounded-lg border border-border flex items-center justify-center hover:bg-primary/10 transition-colors disabled:opacity-40"
+                    >
+                      +
+                    </button>
+                  </div>
+                  {quantite >= restant && (
+                    <p className="text-xs text-red-500 mt-2">Plus que {restant} place(s) disponible(s)</p>
+                  )}
+                </div>
+
+                <div className="mt-6 pt-6 border-t border-border flex justify-between items-center">
+                  <span className="text-foreground">Total</span>
+                  <span className="text-2xl font-bold gold-text">{total.toLocaleString()} FCFA</span>
+                </div>
               </div>
             </div>
 
@@ -365,9 +391,7 @@ const Billetterie = () => {
               <h3 className="font-display text-xl text-foreground mb-4">Vos informations</h3>
 
               {error && (
-                <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-sm">
-                  {error}
-                </div>
+                <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-sm">{error}</div>
               )}
 
               <div className="space-y-4">
@@ -375,31 +399,25 @@ const Billetterie = () => {
                   <label className="block text-sm text-muted-foreground mb-2">
                     <User size={14} className="inline mr-1" /> Nom complet *
                   </label>
-                  <input
-                    type="text" name="nom" value={formData.nom} onChange={handleInputChange}
+                  <input type="text" name="nom" value={formData.nom} onChange={handleInputChange}
                     placeholder="Votre nom et prénom"
-                    className="w-full px-4 py-3 bg-secondary border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                  />
+                    className="w-full px-4 py-3 bg-secondary border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
                 </div>
                 <div>
                   <label className="block text-sm text-muted-foreground mb-2">
                     <Phone size={14} className="inline mr-1" /> Numéro de téléphone *
                   </label>
-                  <input
-                    type="tel" name="telephone" value={formData.telephone} onChange={handleInputChange}
+                  <input type="tel" name="telephone" value={formData.telephone} onChange={handleInputChange}
                     placeholder="6XX XXX XXX"
-                    className="w-full px-4 py-3 bg-secondary border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                  />
+                    className="w-full px-4 py-3 bg-secondary border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
                 </div>
                 <div>
                   <label className="block text-sm text-muted-foreground mb-2">
                     <Mail size={14} className="inline mr-1" /> Adresse email *
                   </label>
-                  <input
-                    type="email" name="email" value={formData.email} onChange={handleInputChange}
+                  <input type="email" name="email" value={formData.email} onChange={handleInputChange}
                     placeholder="votre@email.com"
-                    className="w-full px-4 py-3 bg-secondary border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                  />
+                    className="w-full px-4 py-3 bg-secondary border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
                   <p className="text-xs text-muted-foreground mt-1">
                     Votre billet avec QR code sera envoyé à cette adresse
                   </p>
@@ -412,9 +430,7 @@ const Billetterie = () => {
                 <ChevronLeft size={16} className="inline mr-1" /> Retour
               </button>
               <button
-                onClick={() => {
-                  if (validateForm()) { setError(""); setStep(4); }
-                }}
+                onClick={() => { if (validateForm()) { setError(""); setStep(4); } }}
                 className="flex-1 gold-gradient text-primary-foreground py-3 rounded-lg font-semibold uppercase tracking-wider hover:opacity-90"
               >
                 Continuer <ChevronRight size={16} className="inline ml-1" />
@@ -429,14 +445,25 @@ const Billetterie = () => {
             <div className="bg-card rounded-xl border border-border p-6">
               <h3 className="font-display text-xl text-foreground mb-4">Paiement sécurisé</h3>
 
-              {/* Récapitulatif */}
+              {/* Récapitulatif avec image miniature */}
               <div className="bg-secondary rounded-lg p-4 mb-6">
-                <p className="text-sm text-muted-foreground mb-2">Récapitulatif</p>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">{pack.nom} x{quantite}</span>
-                    <span className="text-foreground">{total.toLocaleString()} FCFA</span>
+                <p className="text-sm text-muted-foreground mb-3">Récapitulatif</p>
+                <div className="flex items-center gap-3 mb-3">
+                  {getImageUrl(pack.image) ? (
+                    <img src={getImageUrl(pack.image)!} alt={pack.nom}
+                      className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
+                      onError={(e: any) => { e.target.style.display = "none"; }} />
+                  ) : (
+                    <div className="w-12 h-12 rounded-lg gold-gradient flex items-center justify-center flex-shrink-0">
+                      <Package size={20} className="text-primary-foreground" />
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-foreground font-medium">{pack.nom}</p>
+                    <p className="text-xs text-muted-foreground">{Number(pack.prix).toLocaleString()} FCFA × {quantite}</p>
                   </div>
+                </div>
+                <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Client</span>
                     <span className="text-foreground">{formData.nom}</span>
@@ -450,23 +477,16 @@ const Billetterie = () => {
 
               {/* Mode de paiement */}
               <div className="mb-6">
-                <label className="block text-sm text-muted-foreground mb-3">
-                  Mode de paiement
-                </label>
+                <label className="block text-sm text-muted-foreground mb-3">Mode de paiement</label>
                 <div className="grid grid-cols-2 gap-3">
                   {[
                     { key: "orange", label: "Orange Money", icon: "🟠" },
                     { key: "mtn", label: "MTN MoMo", icon: "🟡" },
                   ].map((p) => (
-                    <button
-                      key={p.key}
-                      onClick={() => setPayment(p.key as "orange" | "mtn")}
+                    <button key={p.key} onClick={() => setPayment(p.key as "orange" | "mtn")}
                       className={`p-4 rounded-xl border-2 text-center transition-all ${
-                        payment === p.key
-                          ? "border-primary bg-primary/10"
-                          : "border-border bg-card hover:border-primary/30"
-                      }`}
-                    >
+                        payment === p.key ? "border-primary bg-primary/10" : "border-border bg-card hover:border-primary/30"
+                      }`}>
                       <span className="text-2xl mb-1 block">{p.icon}</span>
                       <span className={`text-sm font-semibold ${payment === p.key ? "text-primary" : "text-muted-foreground"}`}>
                         {p.label}
@@ -477,9 +497,7 @@ const Billetterie = () => {
               </div>
 
               {error && (
-                <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-sm">
-                  {error}
-                </div>
+                <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-sm">{error}</div>
               )}
 
               <div className="bg-secondary/50 rounded-lg p-4 border border-border">
@@ -488,20 +506,18 @@ const Billetterie = () => {
                   Vous serez redirigé vers NotchPay pour finaliser le paiement
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Après confirmation du paiement, votre billet sera envoyé à <span className="text-foreground">{formData.email}</span>
+                  Après confirmation, votre billet sera envoyé à <span className="text-foreground">{formData.email}</span>
                 </p>
               </div>
             </div>
 
             <div className="flex gap-3">
-              <button onClick={() => setStep(3)} disabled={loading} className="flex-1 border border-border text-muted-foreground py-3 rounded-lg hover:bg-secondary transition-colors disabled:opacity-50">
+              <button onClick={() => setStep(3)} disabled={loading}
+                className="flex-1 border border-border text-muted-foreground py-3 rounded-lg hover:bg-secondary transition-colors disabled:opacity-50">
                 <ChevronLeft size={16} className="inline mr-1" /> Retour
               </button>
-              <button
-                onClick={handlePayer}
-                disabled={loading}
-                className="flex-1 gold-gradient text-primary-foreground py-3 rounded-lg font-semibold uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-50"
-              >
+              <button onClick={handlePayer} disabled={loading}
+                className="flex-1 gold-gradient text-primary-foreground py-3 rounded-lg font-semibold uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-50">
                 {loading ? (
                   <><Loader2 size={18} className="animate-spin" /> En cours...</>
                 ) : (
@@ -558,20 +574,15 @@ const Billetterie = () => {
               </div>
 
               <div className="flex flex-col gap-3">
-                <Link
-                  to="/"
-                  className="gold-gradient text-primary-foreground px-6 py-3 rounded-lg font-semibold text-sm uppercase tracking-wider hover:opacity-90 transition-opacity"
-                >
+                <Link to="/"
+                  className="gold-gradient text-primary-foreground px-6 py-3 rounded-lg font-semibold text-sm uppercase tracking-wider hover:opacity-90 transition-opacity">
                   Retour à l'accueil
                 </Link>
                 <button
                   onClick={() => {
-                    setStep(1);
-                    setSelectedPack(null);
-                    setQuantite(1);
+                    setStep(1); setSelectedPack(null); setQuantite(1);
                     setFormData({ nom: "", telephone: "", email: "" });
-                    setError("");
-                    setTransactionId("");
+                    setError(""); setTransactionId("");
                   }}
                   className="text-primary text-sm hover:underline"
                 >

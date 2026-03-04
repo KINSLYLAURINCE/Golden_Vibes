@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
-const API_URL = "http://localhost:8000/api";
+const API_URL = "http://localhost:1002/api";
 
 // Valeurs attendues par le backend (in:candidature,partenariat,info,reclamation,autre)
 const subjects = [
