@@ -9,7 +9,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Search, Crown, Eye, Heart, ChevronLeft, ChevronRight, Play, Loader2 } from "lucide-react";
+import { Search, Crown, Eye, Heart, ChevronLeft, ChevronRight, Play, Loader2, ArrowUpDown } from "lucide-react";
 import axios from "axios";
 
 const API_URL = "http://localhost:1002/api";
@@ -26,7 +26,7 @@ const Candidats = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("tous");
   const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState("votes_count");
+  const [sortBy, setSortBy] = useState("votes_desc"); // Changé pour votes_desc par défaut
 
   /* Charger les candidats */
   const fetchCandidats = async () => {
@@ -35,8 +35,27 @@ const Candidats = () => {
       const params = new URLSearchParams();
       if (filter !== "tous") params.append("categorie", filter);
       if (search) params.append("search", search);
-      params.append("sort", sortBy === "votes" ? "votes_count" : sortBy === "numero" ? "numero" : "nom");
-      params.append("order", sortBy === "nom" ? "asc" : sortBy === "numero" ? "asc" : "desc");
+      
+      // Configuration du tri
+      if (sortBy === "votes_desc") {
+        params.append("sort", "votes_count");
+        params.append("order", "desc");
+      } else if (sortBy === "votes_asc") {
+        params.append("sort", "votes_count");
+        params.append("order", "asc");
+      } else if (sortBy === "numero_asc") {
+        params.append("sort", "numero");
+        params.append("order", "asc");
+      } else if (sortBy === "numero_desc") {
+        params.append("sort", "numero");
+        params.append("order", "desc");
+      } else if (sortBy === "nom_asc") {
+        params.append("sort", "nom");
+        params.append("order", "asc");
+      } else if (sortBy === "nom_desc") {
+        params.append("sort", "nom");
+        params.append("order", "desc");
+      }
 
       const response = await axios.get(`${API_URL}/candidats?${params.toString()}`);
       setCandidats(response.data.data || response.data);
@@ -70,17 +89,19 @@ const Candidats = () => {
         {/* Filtres */}
         <div className="flex flex-wrap gap-3 items-center justify-center mb-6">
           {["tous", "miss", "master"].map((f) => (
-            <button
+            <motion.button
               key={f}
               onClick={() => setFilter(f)}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               className={`px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all ${
                 filter === f
-                  ? "gold-gradient text-primary-foreground"
+                  ? "gold-gradient text-primary-foreground shadow-lg"
                   : "bg-secondary text-muted-foreground hover:text-foreground border border-border"
               }`}
             >
               {f === "tous" ? "TOUS" : f === "miss" ? "MISS" : "MASTER"}
-            </button>
+            </motion.button>
           ))}
         </div>
 
@@ -93,27 +114,52 @@ const Candidats = () => {
               placeholder="Rechercher..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 pr-4 py-2 bg-secondary border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              className="pl-9 pr-4 py-2 bg-secondary border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary w-[200px] md:w-[250px]"
             />
           </div>
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            className="px-3 py-2 bg-secondary border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-          >
-            <option value="votes_count">Par votes</option>
-            <option value="numero">Par numéro</option>
-            <option value="nom">Par nom</option>
-          </select>
+          
+          <div className="flex items-center gap-2">
+            <ArrowUpDown size={16} className="text-muted-foreground" />
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="px-3 py-2 bg-secondary border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            >
+              <option value="votes_desc">Plus de votes (↓)</option>
+              <option value="votes_asc">Moins de votes (↑)</option>
+              <option value="numero_asc">Numéro (↑)</option>
+              <option value="numero_desc">Numéro (↓)</option>
+              <option value="nom_asc">Nom (A-Z)</option>
+              <option value="nom_desc">Nom (Z-A)</option>
+            </select>
+          </div>
         </div>
+
+        {/* Nombre de résultats */}
+        {!loading && candidats.length > 0 && (
+          <p className="text-center text-xs text-muted-foreground mb-4">
+            {candidats.length} candidat(s) trouvé(s)
+          </p>
+        )}
 
         {/* Chargement */}
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 size={40} className="animate-spin text-primary" />
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            >
+              <Loader2 size={40} className="text-primary" />
+            </motion.div>
           </div>
         ) : candidats.length === 0 ? (
-          <p className="text-center text-muted-foreground py-10">Aucun candidat trouvé.</p>
+          <motion.p 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center text-muted-foreground py-10"
+          >
+            Aucun candidat trouvé.
+          </motion.p>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
             {candidats.map((c, i) => (
@@ -175,7 +221,7 @@ const CandidatCard = ({ candidat: c, delay }) => {
 
   return (
     <motion.div
-      className="bg-card rounded-xl border border-border overflow-hidden group hover:border-primary/50 transition-all"
+      className="bg-card rounded-xl border border-border overflow-hidden group hover:border-primary/50 transition-all hover:shadow-xl hover:shadow-primary/10"
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
@@ -248,10 +294,16 @@ const CandidatCard = ({ candidat: c, delay }) => {
 
         {/* Badge votes */}
         <div className="absolute top-2 right-2 z-10">
-          <span className="bg-background/80 backdrop-blur-sm text-foreground text-[10px] md:text-xs font-bold px-2 py-0.5 md:px-3 md:py-1 rounded-full flex items-center gap-1">
+          <motion.span 
+            animate={{ 
+              boxShadow: ["0 0 0 0 rgba(245,158,11,0.4)", "0 0 0 10px rgba(245,158,11,0)"]
+            }}
+            transition={{ duration: 2, repeat: Infinity }}
+            className="bg-background/80 backdrop-blur-sm text-foreground text-[10px] md:text-xs font-bold px-2 py-0.5 md:px-3 md:py-1 rounded-full flex items-center gap-1"
+          >
             <Heart size={10} className="text-yellow-400 md:w-3 md:h-3" />
             {Number(c.votes_count ?? 0).toLocaleString()}
-          </span>
+          </motion.span>
         </div>
 
         {/* Badge vidéo */}
@@ -269,8 +321,13 @@ const CandidatCard = ({ candidat: c, delay }) => {
         <div className="flex justify-between items-start mb-1">
           <div>
             <h3 className="font-display text-sm md:text-lg text-foreground leading-tight">{c.nom}</h3>
+            <p className="text-[10px] md:text-xs text-muted-foreground mt-0.5">
+              {c.votes_count || 0} vote(s)
+            </p>
           </div>
-          <span className="text-[10px] md:text-xs font-bold text-yellow-400">#{c.numero}</span>
+          <span className="text-[10px] md:text-xs font-bold text-yellow-400 bg-yellow-400/10 px-1.5 py-0.5 rounded">
+            #{c.numero}
+          </span>
         </div>
       </div>
 
@@ -278,13 +335,13 @@ const CandidatCard = ({ candidat: c, delay }) => {
       <div className="flex border-t border-border">
         <Link
           to={`/candidats/${c.id}`}
-          className="flex-1 flex items-center justify-center gap-1 py-2 md:py-3 text-[10px] md:text-xs font-medium text-muted-foreground hover:text-foreground transition-colors border-r border-border"
+          className="flex-1 flex items-center justify-center gap-1 py-2 md:py-3 text-[10px] md:text-xs font-medium text-muted-foreground hover:text-foreground transition-colors border-r border-border hover:bg-secondary/50"
         >
           <Eye size={12} className="md:w-4 md:h-4" /> Profil
         </Link>
         <Link
           to={`/vote?candidat=${c.id}`}
-          className="flex-1 flex items-center justify-center gap-1 py-2 md:py-3 gold-gradient text-primary-foreground text-[10px] md:text-xs font-bold uppercase tracking-wider"
+          className="flex-1 flex items-center justify-center gap-1 py-2 md:py-3 gold-gradient text-primary-foreground text-[10px] md:text-xs font-bold uppercase tracking-wider hover:opacity-90 transition-opacity"
         >
           <Heart size={12} className="md:w-4 md:h-4" /> Voter
         </Link>
