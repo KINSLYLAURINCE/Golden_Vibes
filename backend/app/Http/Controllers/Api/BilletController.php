@@ -145,6 +145,7 @@ class BilletController extends Controller
         // Vérifier le statut
         if ($status === 'complete') {
             // ✅ PAIEMENT VALIDÉ
+
             
             $billet->update([
                 'statut_paiement' => 'valide',
@@ -170,6 +171,33 @@ class BilletController extends Controller
         }
 
         return response()->json(['success' => false, 'status' => $status], 200);
+    }
+
+    /**
+     * Envoyer email avec code billet
+     */
+    private function sendBilletEmailSimple($billet)
+    {
+        try {
+            // Charger la relation pack
+            $billet->load('pack');
+
+            // Envoyer l'email
+            Mail::to($billet->email)->send(new BilletConfirmation($billet));
+
+            Log::info('Email billet envoyé', [
+                'email' => $billet->email,
+                'code' => $billet->qr_code,
+                'pack' => $billet->pack->nom,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Erreur envoi email billet', [
+                'billet_id' => $billet->id,
+                'email' => $billet->email,
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 
     /**

@@ -106,7 +106,7 @@ const ModifierCandidat = () => {
 
     try {
       const formData = new FormData();
-      formData.append("_method", "PUT"); // Laravel method spoofing
+      formData.append("_method", "POST"); // Laravel method spoofing
       formData.append("numero", form.numero);
       formData.append("nom", form.nom);
       formData.append("categorie", form.categorie);

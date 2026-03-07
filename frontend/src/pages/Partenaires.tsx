@@ -32,7 +32,6 @@ const getLogoUrl = (logo: string) => {
   return `${STORAGE_URL}/${logo}`;
 };
 
-// Minuscules — correspondent exactement aux valeurs en BDD
 const categoryOrder: Categorie[] = ["platine", "or", "argent", "bronze"];
 
 const categoryConfig: Record<Categorie, {
@@ -82,7 +81,6 @@ const categoryConfig: Record<Categorie, {
   },
 };
 
-// Fallback sécurisé : si catégorie inconnue, on prend bronze
 const getCfg = (cat: string) => categoryConfig[cat as Categorie] ?? categoryConfig.bronze;
 
 const advantages = [
@@ -117,7 +115,6 @@ function usePartners() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       if (!json.success) throw new Error("Réponse API invalide");
-      // Normalise la catégorie en minuscules pour matcher categoryConfig
       const data: Partner[] = (json.data as Partner[]).map(p => ({
         ...p,
         categorie: (p.categorie ?? "").toLowerCase() as Categorie,
@@ -242,62 +239,228 @@ const FilterBar = ({ active, onChange }: { active: FilterValue; onChange: (v: Fi
   </div>
 );
 
-// ─── Formulaire ───────────────────────────────────────────────────────────────
+// ─── Formulaire de demande de partenariat ─────────────────────────────────────
+// Envoie vers POST /api/contact — structure compatible table `messages` :
+//   nom        → nom de l'entreprise (+ nom du contact)
+//   email      → email de contact
+//   telephone  → téléphone
+//   objet      → "partenariat" (valeur fixe)
+//   message    → message libre
+// ──────────────────────────────────────────────────────────────────────────────
+interface PartenaireFormState {
+  nom_entreprise: string;  // → nom dans la table messages
+  nom_contact:   string;   // ajouté au message pour info complète
+  email:         string;
+  telephone:     string;
+  message:       string;
+}
+
+const defaultForm: PartenaireFormState = {
+  nom_entreprise: "",
+  nom_contact:   "",
+  email:         "",
+  telephone:     "",
+  message:       "",
+};
+
 const ContactForm = () => {
   const [submitted, setSubmitted] = useState(false);
   const [sending, setSending]     = useState(false);
-  const [form, setForm] = useState({ nom: "", entreprise: "", email: "", telephone: "", message: "" });
+  const [error, setError]         = useState<string | null>(null);
+  const [form, setForm]           = useState<PartenaireFormState>(defaultForm);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+    setError(null);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSending(true);
-    await new Promise(r => setTimeout(r, 1200));
-    setSending(false);
-    setSubmitted(true);
-    setTimeout(() => setSubmitted(false), 5000);
-    setForm({ nom: "", entreprise: "", email: "", telephone: "", message: "" });
+    setError(null);
+
+    try {
+      // Payload compatible avec la table `messages` du backend
+      // nom = nom de l'entreprise (on ajoute le contact dans le message)
+      const payload = {
+        nom:       form.nom_entreprise.trim(),
+        email:     form.email.trim(),
+        telephone: form.telephone.trim(),
+        objet:     "partenariat",  // valeur fixe — in:candidature,partenariat,info,reclamation,autre
+        message:   [
+          form.nom_contact.trim() ? `Contact : ${form.nom_contact.trim()}` : "",
+          form.message.trim(),
+        ]
+          .filter(Boolean)
+          .join("\n\n"),
+      };
+
+      const res = await fetch(`${API_URL}/contact`, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body:    JSON.stringify(payload),
+      });
+
+      const json = await res.json();
+
+      if (!res.ok) {
+        if (json.errors) {
+          const first = Object.values(json.errors as Record<string, string[]>)[0][0];
+          throw new Error(first);
+        }
+        throw new Error(json.message ?? `Erreur ${res.status}`);
+      }
+
+      setSubmitted(true);
+      setForm(defaultForm);
+      setTimeout(() => setSubmitted(false), 6000);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Une erreur est survenue.");
+    } finally {
+      setSending(false);
+    }
   };
 
   const inputClass =
     "w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-white/25 focus:outline-none focus:ring-2 focus:ring-amber-400/40 focus:border-amber-400/40 transition-all text-sm";
 
+  // ── Écran succès ──
+  if (submitted) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="flex flex-col items-center justify-center py-10 text-center gap-4"
+      >
+        <div className="w-16 h-16 rounded-full bg-amber-400/15 border border-amber-400/30 flex items-center justify-center">
+          <CheckCircle className="w-7 h-7 text-amber-300" />
+        </div>
+        <div>
+          <p className="font-bold text-lg text-white" style={{ fontFamily: "'Playfair Display', serif" }}>
+            Demande envoyée !
+          </p>
+          <p className="text-white/40 text-sm mt-1">
+            Notre équipe vous contactera dans les plus brefs délais.
+          </p>
+        </div>
+        <button
+          onClick={() => setSubmitted(false)}
+          className="text-xs text-amber-300/60 hover:text-amber-300 underline underline-offset-2 transition-colors"
+        >
+          Envoyer une autre demande
+        </button>
+      </motion.div>
+    );
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Entreprise + Contact */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {[
-          { name: "nom",        label: "Nom complet *",       type: "text",  ph: "Votre nom",               req: true  },
-          { name: "entreprise", label: "Entreprise *",        type: "text",  ph: "Nom de votre entreprise", req: true  },
-          { name: "email",      label: "Email *",             type: "email", ph: "votre@email.com",          req: true  },
-          { name: "telephone",  label: "Téléphone",           type: "tel",   ph: "+237 XX XX XX XX",         req: false },
-        ].map(f => (
-          <div key={f.name}>
-            <label className="block text-xs font-semibold text-white/50 mb-1.5 uppercase tracking-wider">{f.label}</label>
-            <input type={f.type} name={f.name} required={f.req}
-                   value={form[f.name as keyof typeof form]}
-                   onChange={handleChange} className={inputClass} placeholder={f.ph} />
-          </div>
-        ))}
-      </div>
-      <div>
-        <label className="block text-xs font-semibold text-white/50 mb-1.5 uppercase tracking-wider">Message *</label>
-        <textarea name="message" required rows={4} value={form.message}
-                  onChange={handleChange} className={`${inputClass} resize-none`}
-                  placeholder="Parlez-nous de votre entreprise et de vos objectifs de partenariat..." />
+        <div>
+          <label className="block text-xs font-semibold text-white/50 mb-1.5 uppercase tracking-wider">
+            Entreprise *
+          </label>
+          <input
+            type="text"
+            name="nom_entreprise"
+            required
+            value={form.nom_entreprise}
+            onChange={handleChange}
+            className={inputClass}
+            placeholder="Nom de votre entreprise"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-white/50 mb-1.5 uppercase tracking-wider">
+            Nom du contact *
+          </label>
+          <input
+            type="text"
+            name="nom_contact"
+            required
+            value={form.nom_contact}
+            onChange={handleChange}
+            className={inputClass}
+            placeholder="Votre nom complet"
+          />
+        </div>
       </div>
 
-      <motion.button type="submit" disabled={sending || submitted}
-        whileHover={!sending && !submitted ? { scale: 1.02 } : {}}
-        whileTap={!sending && !submitted ? { scale: 0.98 } : {}}
-        className="w-full bg-gradient-to-r from-amber-400 to-yellow-500 text-black font-bold py-3.5 px-6 rounded-xl flex items-center justify-center gap-2 transition-all disabled:opacity-70 shadow-lg hover:shadow-amber-400/30">
+      {/* Email + Téléphone */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-xs font-semibold text-white/50 mb-1.5 uppercase tracking-wider">
+            Email *
+          </label>
+          <input
+            type="email"
+            name="email"
+            required
+            value={form.email}
+            onChange={handleChange}
+            className={inputClass}
+            placeholder="votre@email.com"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-white/50 mb-1.5 uppercase tracking-wider">
+            Téléphone
+          </label>
+          <input
+            type="tel"
+            name="telephone"
+            value={form.telephone}
+            onChange={handleChange}
+            className={inputClass}
+            placeholder="+237 XX XX XX XX"
+          />
+        </div>
+      </div>
+
+      {/* Message */}
+      <div>
+        <label className="block text-xs font-semibold text-white/50 mb-1.5 uppercase tracking-wider">
+          Message *
+        </label>
+        <textarea
+          name="message"
+          required
+          rows={4}
+          value={form.message}
+          onChange={handleChange}
+          className={`${inputClass} resize-none`}
+          placeholder="Parlez-nous de votre entreprise et de vos objectifs de partenariat…"
+        />
+      </div>
+
+      {/* Erreur API */}
+      <AnimatePresence>
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="flex items-center gap-2 text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-xl px-4 py-3"
+          >
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            {error}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Submit */}
+      <motion.button
+        type="submit"
+        disabled={sending}
+        whileHover={!sending ? { scale: 1.02 } : {}}
+        whileTap={!sending ? { scale: 0.98 } : {}}
+        className="w-full bg-gradient-to-r from-amber-400 to-yellow-500 text-black font-bold py-3.5 px-6 rounded-xl flex items-center justify-center gap-2 transition-all disabled:opacity-70 shadow-lg hover:shadow-amber-400/30"
+      >
         <AnimatePresence mode="wait">
-          {submitted ? (
-            <motion.span key="ok" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-2">
-              <CheckCircle className="w-5 h-5" /> Demande envoyée !
-            </motion.span>
-          ) : sending ? (
+          {sending ? (
             <motion.span key="load" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2">
               <Loader2 className="w-5 h-5 animate-spin" /> Envoi en cours…
             </motion.span>
@@ -378,7 +541,7 @@ const Partenaires = () => {
         )}
       </section>
 
-      {/* ── Grille ── */}
+      {/* ── Grille partenaires ── */}
       <section className="relative z-10 container mx-auto max-w-6xl px-4 pb-24">
 
         {!loading && !error && partners.length > 0 && (
@@ -427,7 +590,6 @@ const Partenaires = () => {
                     <div className="flex-1 h-px bg-white/5" />
                     <span className="text-xs text-white/20">{items.length} partenaire{items.length > 1 ? "s" : ""}</span>
                   </div>
-
                   <div className={`grid gap-6 ${isPlatinum ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"}`}>
                     {items.map((p, i) => (
                       <PartnerCard key={p.id ?? `${p.nom}-${i}`} p={p} platinum={isPlatinum} />
@@ -464,6 +626,7 @@ const Partenaires = () => {
             </p>
           </motion.div>
 
+          {/* Avantages */}
           <motion.div variants={stagger} initial="hidden" whileInView="visible"
             viewport={{ once: true }} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-16">
             {advantages.map((adv, i) => (
@@ -476,13 +639,17 @@ const Partenaires = () => {
             ))}
           </motion.div>
 
+          {/* Formulaire + Infos */}
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 max-w-5xl mx-auto">
             <motion.div initial={{ opacity: 0, x: -24 }} whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }} transition={{ duration: 0.6 }}
               className="lg:col-span-3 rounded-2xl border border-white/7 bg-white/3 p-8">
-              <h3 className="font-bold text-xl mb-6" style={{ fontFamily: "'Playfair Display', serif" }}>
-                Formulaire de contact
+              <h3 className="font-bold text-xl mb-1" style={{ fontFamily: "'Playfair Display', serif" }}>
+                Formulaire de partenariat
               </h3>
+              <p className="text-white/30 text-xs mb-6">
+                Votre demande sera enregistrée et traitée par notre équipe.
+              </p>
               <ContactForm />
             </motion.div>
 

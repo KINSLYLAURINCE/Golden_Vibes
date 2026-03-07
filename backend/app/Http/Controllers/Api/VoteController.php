@@ -27,7 +27,7 @@ class VoteController extends Controller
             'telephone' => 'required|string|regex:/^237[0-9]{9}$/',
         ]);
 
-        $montant = $request->nombre_votes * 100;
+        $montant = $request->nombre_votes * 105;
         $transactionId = 'VOTE-' . strtoupper(Str::random(12));
         $candidat = Candidat::findOrFail($request->candidat_id);
 

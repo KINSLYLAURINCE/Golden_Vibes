@@ -21,3 +21,4 @@ Route::get('/', function () {
     
 //     return 'Email envoyé ! Vérifie ta boîte mail.';
 // });
+

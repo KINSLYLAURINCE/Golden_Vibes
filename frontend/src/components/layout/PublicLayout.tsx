@@ -15,27 +15,30 @@ import MobileBottomBar from "./MobileBottomBar";
 import MobileSidebar from "./MobileSidebar";
 
 const PublicLayout = ({ children }: { children: ReactNode }) => {
-  /* État de la sidebar mobile */
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Barre de navigation desktop (cachée sur mobile) */}
+
+      {/* Navbar desktop */}
       <Navbar />
 
-      {/* Contenu principal - padding top pour navbar desktop, padding bottom pour bottom bar mobile */}
-      <main className="flex-1 pt-16 md:pt-16 pb-20 md:pb-0">{children}</main>
+      {/* Contenu principal */}
+      <main className="flex-1 pt-16 md:pt-16 pb-20 md:pb-0">
+        {children}
+      </main>
 
-      {/* Pied de page (caché sur mobile pour éviter conflit avec bottom bar) */}
-      <div className="hidden md:block">
+      {/* Footer visible sur tous les écrans */}
+      <div className="pb-20 md:pb-0">
         <Footer />
       </div>
 
-      {/* Barre du bas mobile (style WhatsApp) */}
+      {/* Bottom bar mobile */}
       <MobileBottomBar onToggleSidebar={() => setSidebarOpen(true)} />
 
-      {/* Sidebar mobile (drawer) */}
+      {/* Sidebar mobile */}
       <MobileSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+
     </div>
   );
 };
