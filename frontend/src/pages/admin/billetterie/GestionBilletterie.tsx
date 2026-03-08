@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import axios from "axios";
 
-import { API_URL, getImageUrl } from "@/services/api"; // ✅
+import { API_URL, getImageUrl } from "@/services/api"; 
 
 const emptyForm = { nom: "", prix: "", places_disponibles: "", avantages: "", statut: "en_vente" };
 

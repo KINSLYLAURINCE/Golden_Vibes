@@ -7,6 +7,7 @@ import {
 
 import { API_URL } from "@/services/api";
 
+
 const subjects = [
   { label: "Candidature", value: "candidature" },
   { label: "Partenariat", value: "partenariat" },

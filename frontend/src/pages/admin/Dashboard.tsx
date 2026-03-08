@@ -16,8 +16,7 @@ import {
   ResponsiveContainer, PieChart, Pie, Cell
 } from "recharts";
 
-import { API_URL } from "@/services/api";  // ✅ Named import for API_URL
-// import api from "@/services/api";  // ❌ This won't work - no default export
+import { API_URL } from "@/services/api";  
 
 const COLORS_PIE = ["#FFD700", "#B8860B", "#666", "#444", "#333"];
 

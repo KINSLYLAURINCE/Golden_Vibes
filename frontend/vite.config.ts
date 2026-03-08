@@ -13,12 +13,12 @@ export default defineConfig(({ mode }) => ({
     },
     proxy: {
       "/api": {
-        target: "http://localhost:1002",
+        target: "http://localhost:8000",
         changeOrigin: true,
         secure: false,
       },
       "/storage": {
-        target: "http://localhost:1002",
+        target: "http://localhost:8000",
         changeOrigin: true,
         secure: false,
       },

@@ -47,7 +47,7 @@
             margin-bottom: 10px;
         }
         .code {
-            color: #FFFFFF;
+            color: #00ff62;
             font-size: 32px;
             font-weight: bold;
             font-family: 'Courier New', monospace;

@@ -14,6 +14,7 @@ import axios from "axios";
 
 import { API_URL, getImageUrl } from "@/services/api";
 
+
 interface Pack {
   id: number;
   nom: string;
