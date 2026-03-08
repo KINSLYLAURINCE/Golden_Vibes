@@ -29,11 +29,22 @@ class BilletController extends Controller
     {
         $request->validate([
             'pack_id' => 'required|exists:packs,id',
-            'quantite' => 'required|integer|min:1',
-            'nom' => 'required|string',
-            'email' => 'required|email',
-            'telephone' => 'required|string|regex:/^237[0-9]{9}$/',
+            'quantite' => 'required|integer|min:1|max:10', // Max 10 billets par commande
+            'nom' => 'required|string|min:2|max:100',
+            'email' => 'required|email|max:150',
+            'telephone' => 'required|string|regex:/^237[0-9]{9}$/|size:12', // Exactement 12 caractères
         ]);
+
+        // Nettoyer le téléphone (enlever espaces si frontend en envoie)
+        $telephone = preg_replace('/[^0-9]/', '', $request->telephone);
+
+        // Re-valider après nettoyage
+        if (!preg_match('/^237[0-9]{9}$/', $telephone)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Format de téléphone invalide. Utilisez : 237XXXXXXXXX'
+            ], 400);
+        }
 
         $pack = Pack::findOrFail($request->pack_id);
 
@@ -182,17 +193,17 @@ class BilletController extends Controller
             // Charger la relation pack
             $billet->load('pack');
 
-            // Envoyer l'email
+            // Envoyer VRAIMENT l'email
             Mail::to($billet->email)->send(new BilletConfirmation($billet));
 
-            Log::info('Email billet envoyé', [
+            Log::info('✅ Email billet VRAIMENT envoyé', [
                 'email' => $billet->email,
                 'code' => $billet->qr_code,
                 'pack' => $billet->pack->nom,
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Erreur envoi email billet', [
+            Log::error('❌ Erreur envoi email billet', [
                 'billet_id' => $billet->id,
                 'email' => $billet->email,
                 'error' => $e->getMessage()
@@ -200,30 +211,4 @@ class BilletController extends Controller
         }
     }
 
-    /**
-     * Envoyer email avec code billet
-     */
-    private function sendBilletEmailSimple($billet)
-    {
-        try {
-            // Charger la relation pack
-            $billet->load('pack');
-
-            // Envoyer l'email
-            Mail::to($billet->email)->send(new BilletConfirmation($billet));
-
-            Log::info('Email billet envoyé', [
-                'email' => $billet->email,
-                'code' => $billet->qr_code,
-                'pack' => $billet->pack->nom,
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Erreur envoi email billet', [
-                'billet_id' => $billet->id,
-                'email' => $billet->email,
-                'error' => $e->getMessage()
-            ]);
-        }
-    }
 }

@@ -23,9 +23,19 @@ class VoteController extends Controller
     {
         $request->validate([
             'candidat_id' => 'required|exists:candidats,id',
-            'nombre_votes' => 'required|integer|min:1',
-            'telephone' => 'required|string|regex:/^237[0-9]{9}$/',
+            'nombre_votes' => 'required|integer|min:1|max:1000', // Max 1000 votes par transaction
+            'telephone' => 'required|string|regex:/^237[0-9]{9}$/|size:12',
         ]);
+
+        // Nettoyer le téléphone
+        $telephone = preg_replace('/[^0-9]/', '', $request->telephone);
+
+        if (!preg_match('/^237[0-9]{9}$/', $telephone)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Format de téléphone invalide'
+            ], 400);
+        }
 
         $montant = $request->nombre_votes * 105;
         $transactionId = 'VOTE-' . strtoupper(Str::random(12));
