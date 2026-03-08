@@ -9,6 +9,7 @@ import { motion } from "framer-motion";
 import { Calendar, MapPin, Clock, Star, X, ChevronLeft, ChevronRight, Image, Loader2 } from "lucide-react";
 import axios from "axios";
 
+
 import { API_URL, getImageUrl } from "@/services/api";
 
 const formatDate = (dateStr: string) => {
