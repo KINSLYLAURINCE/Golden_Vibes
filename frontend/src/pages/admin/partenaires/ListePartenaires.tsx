@@ -12,8 +12,8 @@ import {
 } from "lucide-react";
 import axios from "axios";
 
-const API_URL = "http://localhost:1002/api";
-const STORAGE_URL = "http://localhost:1002/storage";
+// ✅ Import depuis @/services/api
+import { API_URL, getImageUrl } from "@/services/api";
 
 const CATEGORIES = ["platine", "or", "argent", "bronze"];
 
@@ -96,13 +96,6 @@ const ListePartenaires = () => {
     reader.onloadend = () => setLogoPreview(reader.result);
     reader.readAsDataURL(file);
     showAlert("success", "Logo ajouté avec succès");
-  };
-
-  /* URL logo */
-  const getLogoUrl = (logoPath) => {
-    if (!logoPath) return null;
-    if (logoPath.startsWith("http")) return logoPath;
-    return `${STORAGE_URL}/${logoPath}`;
   };
 
   /* Ouvrir formulaire */
@@ -445,10 +438,11 @@ const ListePartenaires = () => {
                     whileHover={{ scale: 1.001, backgroundColor: "rgba(255,215,0,0.02)" }}
                   >
                     <td className="px-4 py-3">
-                      {getLogoUrl(p.logo) ? (
+                      {/* ✅ Utilisation de getImageUrl à la place de getLogoUrl */}
+                      {getImageUrl(p.logo) ? (
                         <motion.img
                           whileHover={{ scale: 1.1 }}
-                          src={getLogoUrl(p.logo)}
+                          src={getImageUrl(p.logo)}
                           alt={p.nom}
                           className="w-12 h-10 object-contain rounded border border-border bg-white/5 p-1 cursor-pointer"
                           onError={(e) => { e.target.style.display = "none"; }}
@@ -587,7 +581,8 @@ const ListePartenaires = () => {
                     />
                   ) : existingLogo ? (
                     <div className="flex flex-col items-center gap-1">
-                      <img src={getLogoUrl(existingLogo)} alt="Logo actuel" className="h-16 object-contain p-2"
+                      {/* ✅ Utilisation de getImageUrl à la place de getLogoUrl */}
+                      <img src={getImageUrl(existingLogo)} alt="Logo actuel" className="h-16 object-contain p-2"
                         onError={(e) => { e.target.style.display = "none"; }} />
                       <span className="text-xs text-muted-foreground">Cliquer pour remplacer</span>
                     </div>

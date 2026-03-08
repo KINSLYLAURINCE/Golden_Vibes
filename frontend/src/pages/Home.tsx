@@ -24,17 +24,7 @@ import wizdomOg        from "@/assets/artists/wizdom-og.jpg";
 import karlixGyal      from "@/assets/artists/karlix-gyal.jpg";
 import artisteSurprise from "@/assets/artists/artiste-surprise.jpg";
 
-const API_URL     = "http://localhost:1002/api";
-const STORAGE_URL = "http://localhost:1002/storage";
-
-const getPhotoUrl = (photo: unknown): string | null => {
-  if (!photo) return null;
-  if (typeof photo === "object" && photo !== null && "photo" in photo)
-    return getPhotoUrl((photo as { photo: unknown }).photo);
-  if (typeof photo !== "string") return null;
-  if (photo.startsWith("http")) return photo;
-  return `${STORAGE_URL}/${photo}`;
-};
+import { API_URL, getImageUrl } from "@/services/api";
 
 interface Candidat {
   id: number; nom: string; numero: number;
@@ -64,6 +54,7 @@ function useCandidats() {
   }, []);
   return { data, loading, error };
 }
+
 function useEvenements() {
   const [data, setData]       = useState<Evenement[]>([]);
   const [loading, setLoading] = useState(true);
@@ -76,6 +67,7 @@ function useEvenements() {
   }, []);
   return { data, loading, error };
 }
+
 function usePartenaires() {
   const [data, setData]       = useState<Partenaire[]>([]);
   const [loading, setLoading] = useState(true);
@@ -118,6 +110,7 @@ const SectionLoader = () => (
     <Loader2 size={32} className="animate-spin text-primary" />
   </div>
 );
+
 const SectionError = ({ msg }: { msg: string }) => (
   <div className="flex justify-center items-center gap-2 py-12 text-muted-foreground text-sm">
     <AlertCircle size={16} className="text-red-400" /> {msg}
@@ -127,7 +120,7 @@ const SectionError = ({ msg }: { msg: string }) => (
 // ─── Marquee item ─────────────────────────────────────────────────────────────
 const MarqueeItem = ({ p }: { p: Partenaire }) => {
   const [imgErr, setImgErr] = useState(false);
-  const logoUrl = getPhotoUrl(p.logo);
+  const logoUrl = getImageUrl(p.logo); // ✅
   const card = (
     <div className="flex flex-col items-center justify-center gap-2
       bg-card border border-border rounded-xl px-5 py-4 w-36 h-28 shrink-0
@@ -168,25 +161,31 @@ const MarqueePartenaires = ({ partenaires }: { partenaires: Partenaire[] }) => {
 
 // ─── Carte Leader ─────────────────────────────────────────────────────────────
 const LeaderCard = ({ candidat: c, delay }: { candidat: Candidat; delay: number }) => {
-  const photos = [c.photo1, c.photo2].filter(Boolean).map(p => getPhotoUrl(p)!).filter(Boolean);
+  const photos = [c.photo1, c.photo2].filter(Boolean).map(p => getImageUrl(p)!).filter(Boolean); // ✅
   const [idx, setIdx]       = useState(0);
   const [paused, setPaused] = useState(false);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+
   useEffect(() => {
     if (!paused && photos.length > 1) {
       timer.current = setInterval(() => setIdx(p => (p + 1) % photos.length), 3000);
     }
     return () => { if (timer.current) clearInterval(timer.current); };
   }, [paused, photos.length]);
+
   const go = (dir: 1 | -1, e: React.MouseEvent) => {
     e.preventDefault(); e.stopPropagation();
     setIdx(p => (p + dir + photos.length) % photos.length);
     setPaused(true); setTimeout(() => setPaused(false), 5000);
   };
+
   return (
-    <motion.div className="bg-card rounded-xl border-2 border-gold/30 overflow-hidden group hover:border-gold transition-all shadow-xl"
-      initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay }}
-      onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
+    <motion.div
+      className="bg-card rounded-xl border-2 border-gold/30 overflow-hidden group hover:border-gold transition-all shadow-xl"
+      initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }} transition={{ delay }}
+      onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}
+    >
       <div className="relative aspect-[3/4] overflow-hidden bg-secondary">
         <div className="absolute top-2 left-2 z-20">
           <span className="bg-gold text-primary-foreground text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-lg">
@@ -209,8 +208,10 @@ const LeaderCard = ({ candidat: c, delay }: { candidat: Candidat; delay: number 
           <>
             <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5 z-20">
               {photos.map((_, i) => (
-                <button key={i} onClick={() => { setIdx(i); setPaused(true); setTimeout(() => setPaused(false), 5000); }}
-                  className={`transition-all ${i === idx ? "w-3 h-1.5 bg-yellow-400 rounded-full" : "w-1.5 h-1.5 bg-white/70 rounded-full"}`} />
+                <button key={i}
+                  onClick={() => { setIdx(i); setPaused(true); setTimeout(() => setPaused(false), 5000); }}
+                  className={`transition-all ${i === idx ? "w-3 h-1.5 bg-yellow-400 rounded-full" : "w-1.5 h-1.5 bg-white/70 rounded-full"}`}
+                />
               ))}
             </div>
             <button onClick={e => go(-1, e)} className="absolute left-1 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-20">
@@ -249,10 +250,13 @@ const LeaderCard = ({ candidat: c, delay }: { candidat: Candidat; delay: number 
 
 // ─── Carte Événement ──────────────────────────────────────────────────────────
 const EvenementCard = ({ ev, delay }: { ev: Evenement; delay: number }) => {
-  const photo = Array.isArray(ev.photos) && ev.photos.length > 0 ? getPhotoUrl(ev.photos[0]) : null;
+  const photo = Array.isArray(ev.photos) && ev.photos.length > 0 ? getImageUrl(ev.photos[0] as string) : null; // ✅
   return (
-    <motion.div className="bg-card rounded-xl border border-border overflow-hidden group hover:border-primary/50 transition-all"
-      initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay }}>
+    <motion.div
+      className="bg-card rounded-xl border border-border overflow-hidden group hover:border-primary/50 transition-all"
+      initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }} transition={{ delay }}
+    >
       <div className="aspect-video overflow-hidden bg-secondary">
         {photo
           ? <img src={photo} alt={ev.nom} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
@@ -301,7 +305,8 @@ const Home = () => {
         <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
           <motion.img src={logo} alt="Golden Vibes" className="w-28 h-28 mx-auto mb-6"
             initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.8 }} />
-          <motion.h1 className="font-display text-4xl sm:text-5xl lg:text-7xl font-bold text-white mb-4 drop-shadow-lg"
+          <motion.h1
+            className="font-display text-4xl sm:text-5xl lg:text-7xl font-bold text-white mb-4 drop-shadow-lg"
             initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.2 }}>
             Miss & Mister <span className="gold-text">Golden Vibes</span> 2026
           </motion.h1>
@@ -424,7 +429,8 @@ const Home = () => {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 max-w-5xl mx-auto mb-12">
             {djs.map((dj, i) => (
               <motion.div key={dj.nom} className="bg-background rounded-xl border border-border overflow-hidden group"
-                initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}>
+                initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }} transition={{ delay: i * 0.1 }}>
                 <div className="aspect-square overflow-hidden">
                   <img src={dj.photo} alt={dj.nom} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                 </div>
@@ -439,7 +445,8 @@ const Home = () => {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-3xl mx-auto">
             {artists.map((a, i) => (
               <motion.div key={a.nom} className="bg-background rounded-xl border border-border overflow-hidden group text-center"
-                initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}>
+                initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }} transition={{ delay: i * 0.1 }}>
                 <div className="aspect-[3/4] overflow-hidden">
                   <img src={a.photo} alt={a.nom} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                 </div>
@@ -460,7 +467,8 @@ const Home = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
             {temoignages.map((t, i) => (
               <motion.div key={i} className="bg-card rounded-xl border border-border p-6 relative"
-                initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}>
+                initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }} transition={{ delay: i * 0.1 }}>
                 <Quote size={24} className="text-primary/30 absolute top-4 right-4" />
                 <p className="text-muted-foreground text-sm italic leading-relaxed mb-4">"{t.texte}"</p>
                 <p className="font-display text-foreground text-sm">{t.nom}</p>
@@ -478,7 +486,8 @@ const Home = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
             {actualites.map((a, i) => (
               <motion.div key={i} className="bg-background rounded-xl border border-border p-6"
-                initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}>
+                initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }} transition={{ delay: i * 0.1 }}>
                 <div className="flex items-center gap-2 mb-3">
                   <Newspaper size={16} className="text-primary" />
                   <span className="text-xs text-muted-foreground">{a.date}</span>
@@ -491,7 +500,7 @@ const Home = () => {
         </div>
       </section>
 
-      {/* ===== 8. PARTENAIRES — défilement continu ===== */}
+      {/* ===== 8. PARTENAIRES ===== */}
       <section className="py-12 bg-background">
         <div className="container mx-auto px-4 mb-8">
           <h2 className="font-display text-2xl gold-text text-center">Nos Partenaires</h2>

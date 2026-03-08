@@ -6,6 +6,8 @@ import {
   Globe, RefreshCw
 } from "lucide-react";
 
+import { API_URL, getImageUrl } from "@/services/api"; // ✅
+
 // ─── Types ──────────────────────────────────────────────────────────────────
 type Categorie = "platine" | "or" | "argent" | "bronze";
 
@@ -21,16 +23,6 @@ interface Partner {
   statut: "actif";
   ordre: number;
 }
-
-// ─── Config ──────────────────────────────────────────────────────────────────
-const API_URL     = "http://localhost:1002/api";
-const STORAGE_URL = "http://localhost:1002/storage";
-
-const getLogoUrl = (logo: string) => {
-  if (!logo) return null;
-  if (logo.startsWith("http")) return logo;
-  return `${STORAGE_URL}/${logo}`;
-};
 
 const categoryOrder: Categorie[] = ["platine", "or", "argent", "bronze"];
 
@@ -90,7 +82,6 @@ const advantages = [
   { title: "Retombées Médias",   desc: "Couverture presse et réseaux sociaux de grande envergure.",        emoji: "📰" },
 ];
 
-// ─── Animations ───────────────────────────────────────────────────────────────
 const stagger = { hidden: {}, visible: { transition: { staggerChildren: 0.08 } } };
 const fadeUp  = {
   hidden:  { opacity: 0, y: 24 },
@@ -145,7 +136,7 @@ const PartnerSkeleton = () => (
 const PartnerCard = ({ p, platinum = false }: { p: Partner; platinum?: boolean }) => {
   const cfg = getCfg(p.categorie);
   const [imgErr, setImgErr] = useState(false);
-  const logoUrl = getLogoUrl(p.logo);
+  const logoUrl = getImageUrl(p.logo); // ✅
 
   return (
     <motion.article
@@ -240,16 +231,9 @@ const FilterBar = ({ active, onChange }: { active: FilterValue; onChange: (v: Fi
 );
 
 // ─── Formulaire de demande de partenariat ─────────────────────────────────────
-// Envoie vers POST /api/contact — structure compatible table `messages` :
-//   nom        → nom de l'entreprise (+ nom du contact)
-//   email      → email de contact
-//   telephone  → téléphone
-//   objet      → "partenariat" (valeur fixe)
-//   message    → message libre
-// ──────────────────────────────────────────────────────────────────────────────
 interface PartenaireFormState {
-  nom_entreprise: string;  // → nom dans la table messages
-  nom_contact:   string;   // ajouté au message pour info complète
+  nom_entreprise: string;
+  nom_contact:   string;
   email:         string;
   telephone:     string;
   message:       string;
@@ -282,19 +266,15 @@ const ContactForm = () => {
     setError(null);
 
     try {
-      // Payload compatible avec la table `messages` du backend
-      // nom = nom de l'entreprise (on ajoute le contact dans le message)
       const payload = {
         nom:       form.nom_entreprise.trim(),
         email:     form.email.trim(),
         telephone: form.telephone.trim(),
-        objet:     "partenariat",  // valeur fixe — in:candidature,partenariat,info,reclamation,autre
+        objet:     "partenariat",
         message:   [
           form.nom_contact.trim() ? `Contact : ${form.nom_contact.trim()}` : "",
           form.message.trim(),
-        ]
-          .filter(Boolean)
-          .join("\n\n"),
+        ].filter(Boolean).join("\n\n"),
       };
 
       const res = await fetch(`${API_URL}/contact`, {
@@ -326,7 +306,6 @@ const ContactForm = () => {
   const inputClass =
     "w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-white/25 focus:outline-none focus:ring-2 focus:ring-amber-400/40 focus:border-amber-400/40 transition-all text-sm";
 
-  // ── Écran succès ──
   if (submitted) {
     return (
       <motion.div
@@ -357,92 +336,53 @@ const ContactForm = () => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {/* Entreprise + Contact */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-xs font-semibold text-white/50 mb-1.5 uppercase tracking-wider">
             Entreprise *
           </label>
-          <input
-            type="text"
-            name="nom_entreprise"
-            required
-            value={form.nom_entreprise}
-            onChange={handleChange}
-            className={inputClass}
-            placeholder="Nom de votre entreprise"
-          />
+          <input type="text" name="nom_entreprise" required value={form.nom_entreprise}
+            onChange={handleChange} className={inputClass} placeholder="Nom de votre entreprise" />
         </div>
         <div>
           <label className="block text-xs font-semibold text-white/50 mb-1.5 uppercase tracking-wider">
             Nom du contact *
           </label>
-          <input
-            type="text"
-            name="nom_contact"
-            required
-            value={form.nom_contact}
-            onChange={handleChange}
-            className={inputClass}
-            placeholder="Votre nom complet"
-          />
+          <input type="text" name="nom_contact" required value={form.nom_contact}
+            onChange={handleChange} className={inputClass} placeholder="Votre nom complet" />
         </div>
       </div>
 
-      {/* Email + Téléphone */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-xs font-semibold text-white/50 mb-1.5 uppercase tracking-wider">
             Email *
           </label>
-          <input
-            type="email"
-            name="email"
-            required
-            value={form.email}
-            onChange={handleChange}
-            className={inputClass}
-            placeholder="votre@email.com"
-          />
+          <input type="email" name="email" required value={form.email}
+            onChange={handleChange} className={inputClass} placeholder="votre@email.com" />
         </div>
         <div>
           <label className="block text-xs font-semibold text-white/50 mb-1.5 uppercase tracking-wider">
             Téléphone
           </label>
-          <input
-            type="tel"
-            name="telephone"
-            value={form.telephone}
-            onChange={handleChange}
-            className={inputClass}
-            placeholder="+237 XX XX XX XX"
-          />
+          <input type="tel" name="telephone" value={form.telephone}
+            onChange={handleChange} className={inputClass} placeholder="+237 XX XX XX XX" />
         </div>
       </div>
 
-      {/* Message */}
       <div>
         <label className="block text-xs font-semibold text-white/50 mb-1.5 uppercase tracking-wider">
           Message *
         </label>
-        <textarea
-          name="message"
-          required
-          rows={4}
-          value={form.message}
-          onChange={handleChange}
-          className={`${inputClass} resize-none`}
-          placeholder="Parlez-nous de votre entreprise et de vos objectifs de partenariat…"
-        />
+        <textarea name="message" required rows={4} value={form.message}
+          onChange={handleChange} className={`${inputClass} resize-none`}
+          placeholder="Parlez-nous de votre entreprise et de vos objectifs de partenariat…" />
       </div>
 
-      {/* Erreur API */}
       <AnimatePresence>
         {error && (
           <motion.div
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
+            initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
             className="flex items-center gap-2 text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-xl px-4 py-3"
           >
             <AlertCircle className="w-4 h-4 shrink-0" />
@@ -451,10 +391,8 @@ const ContactForm = () => {
         )}
       </AnimatePresence>
 
-      {/* Submit */}
       <motion.button
-        type="submit"
-        disabled={sending}
+        type="submit" disabled={sending}
         whileHover={!sending ? { scale: 1.02 } : {}}
         whileTap={!sending ? { scale: 0.98 } : {}}
         className="w-full bg-gradient-to-r from-amber-400 to-yellow-500 text-black font-bold py-3.5 px-6 rounded-xl flex items-center justify-center gap-2 transition-all disabled:opacity-70 shadow-lg hover:shadow-amber-400/30"
@@ -522,7 +460,6 @@ const Partenaires = () => {
           Des partenaires d'exception qui soutiennent notre vision et créent avec nous des événements inoubliables.
         </motion.p>
 
-        {/* Stats tiers */}
         {!loading && !error && partners.length > 0 && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
             className="flex flex-wrap justify-center gap-8 mt-12">
@@ -543,7 +480,6 @@ const Partenaires = () => {
 
       {/* ── Grille partenaires ── */}
       <section className="relative z-10 container mx-auto max-w-6xl px-4 pb-24">
-
         {!loading && !error && partners.length > 0 && (
           <FilterBar active={filter} onChange={setFilter} />
         )}

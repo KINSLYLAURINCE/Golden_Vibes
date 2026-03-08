@@ -13,7 +13,8 @@ import {
 import { Loader2 } from "lucide-react";
 import axios from "axios";
 
-const API_URL = "http://localhost:8000/api";
+// ✅ Import depuis @/services/api
+import { API_URL } from "@/services/api";
 
 const COLORS_PIE = ["#FFD700", "#B8860B", "#888888", "#555555", "#333333"];
 

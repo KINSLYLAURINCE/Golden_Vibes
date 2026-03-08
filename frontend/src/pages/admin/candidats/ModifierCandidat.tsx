@@ -9,42 +9,60 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, Upload, Save, Loader2 } from "lucide-react";
-import axios from "axios";
 
-const API_URL = "http://localhost:1002/api";
-const STORAGE_URL = "http://localhost:1002/storage";
+import { API_URL, STORAGE_URL, getImageUrl } from "@/services/api";
+
+interface CandidatData {
+  numero: string;
+  nom: string;
+  categorie: string;
+  video: string;
+  statut: string;
+  photo1?: string;
+  photo2?: string;
+}
 
 const ModifierCandidat = () => {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<CandidatData>({
     numero: "",
     nom: "",
     categorie: "",
     video: "",
     statut: "actif",
   });
-  const [photos, setPhotos] = useState({ photo1: null, photo2: null });
-  const [photoPreviews, setPhotoPreviews] = useState({ photo1: "", photo2: "" });
+  const [photos, setPhotos] = useState<{
+    photo1: File | null;
+    photo2: File | null;
+  }>({ photo1: null, photo2: null });
+  const [photoPreviews, setPhotoPreviews] = useState({
+    photo1: "",
+    photo2: ""
+  });
 
   const token = localStorage.getItem("token");
-  const axiosConfig = {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: "application/json",
-    },
-  };
 
   /* Charger le candidat */
   useEffect(() => {
     const fetchCandidat = async () => {
       setLoading(true);
       try {
-        const response = await axios.get(`${API_URL}/admin/candidats/${id}`, axiosConfig);
-        const c = response.data.data || response.data;
+        const response = await fetch(`${API_URL}/admin/candidats/${id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+          },
+        });
+
+        if (!response.ok) throw new Error('Erreur réseau');
+
+        const data = await response.json();
+        const c = data.data || data;
+        
         setForm({
           numero: c.numero,
           nom: c.nom,
@@ -52,10 +70,11 @@ const ModifierCandidat = () => {
           video: c.video || "",
           statut: c.statut,
         });
+        
         // Pré-remplir les previews avec les photos existantes
         setPhotoPreviews({
-          photo1: c.photo1 ? (c.photo1.startsWith("http") ? c.photo1 : `${STORAGE_URL}/${c.photo1}`) : "",
-          photo2: c.photo2 ? (c.photo2.startsWith("http") ? c.photo2 : `${STORAGE_URL}/${c.photo2}`) : "",
+          photo1: getImageUrl(c.photo1) || "",
+          photo2: getImageUrl(c.photo2) || "",
         });
       } catch (err) {
         console.error("Erreur chargement candidat:", err);
@@ -67,12 +86,13 @@ const ModifierCandidat = () => {
     fetchCandidat();
   }, [id]);
 
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+    setError("");
   };
 
-  const handlePhotoChange = (e, photoNumber) => {
-    const file = e.target.files[0];
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>, photoNumber: 'photo1' | 'photo2') => {
+    const file = e.target.files?.[0];
     if (!file) return;
 
     const allowedTypes = ["image/jpeg", "image/jpg", "image/png"];
@@ -90,12 +110,12 @@ const ModifierCandidat = () => {
 
     const reader = new FileReader();
     reader.onloadend = () => {
-      setPhotoPreviews((prev) => ({ ...prev, [photoNumber]: reader.result }));
+      setPhotoPreviews((prev) => ({ ...prev, [photoNumber]: reader.result as string }));
     };
     reader.readAsDataURL(file);
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.categorie) { setError("Veuillez sélectionner une catégorie"); return; }
     if (!form.numero) { setError("Le numéro est obligatoire"); return; }
@@ -116,31 +136,25 @@ const ModifierCandidat = () => {
       if (photos.photo1) formData.append("photo1", photos.photo1);
       if (photos.photo2) formData.append("photo2", photos.photo2);
 
-      const response = await axios.post(
-        `${API_URL}/admin/candidats/${id}`,
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
+      const response = await fetch(`${API_URL}/admin/candidats/${id}`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData
+      });
 
-      if (response.data.success) {
+      const data = await response.json();
+
+      if (response.ok && data.success) {
         alert("Candidat modifié avec succès !");
         navigate("/admin/candidats");
       } else {
-        setError(response.data.message || "Erreur lors de la modification");
+        setError(data.message || data.error || "Erreur lors de la modification");
       }
     } catch (err) {
       console.error("Erreur modification:", err);
-      setError(
-        err.response?.data?.message ||
-        err.response?.data?.error ||
-        err.message ||
-        "Une erreur est survenue"
-      );
+      setError("Une erreur est survenue lors de la modification");
     } finally {
       setSaving(false);
     }
@@ -149,7 +163,12 @@ const ModifierCandidat = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 size={32} className="animate-spin text-primary" />
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+        >
+          <Loader2 size={32} className="text-primary" />
+        </motion.div>
       </div>
     );
   }
@@ -184,7 +203,7 @@ const ModifierCandidat = () => {
             Catégorie <span className="text-red-500">*</span>
           </label>
           <div className="flex gap-3">
-            {["miss", "master"].map((cat) => (
+            {(["miss", "master"] as const).map((cat) => (
               <button
                 key={cat}
                 type="button"
@@ -237,7 +256,7 @@ const ModifierCandidat = () => {
 
         {/* Photos */}
         <div className="grid grid-cols-2 gap-4">
-          {[1, 2].map((n) => (
+          {([1, 2] as const).map((n) => (
             <div key={n}>
               <label className="block text-sm text-muted-foreground mb-2">
                 Photo {n} {n === 1 ? <span className="text-red-500">*</span> : <span className="text-muted-foreground/50">(optionnelle)</span>}
