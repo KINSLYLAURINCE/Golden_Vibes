@@ -9,19 +9,27 @@ import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, ChevronLeft, ChevronRight, Crown, Heart, Play, Award, Loader2 } from "lucide-react";
-import axios from "axios";
 
-const API_URL = "http://localhost:8000/api";
-const STORAGE_URL = "http://localhost:8000/storage";
+import { API_URL, getImageUrl } from "@/services/api";
 
-const getPhotoUrl = (photo) => {
-  if (!photo) return null;
-  if (photo.startsWith("http")) return photo;
-  return `${STORAGE_URL}/${photo}`;
-};
+// Types
+interface Candidat {
+  id: number;
+  nom: string;
+  numero: number;
+  categorie: 'miss' | 'master';
+  photo1?: string;
+  photo2?: string;
+  video?: string;
+  votes_count: number;
+  description?: string;
+  age?: number;
+  ville?: string;
+  talent?: string;
+}
 
 /* Convertir lien YouTube/Facebook en embed */
-const getEmbedUrl = (url) => {
+const getEmbedUrl = (url?: string): string | null => {
   if (!url) return null;
 
   // YouTube
@@ -37,8 +45,8 @@ const getEmbedUrl = (url) => {
 };
 
 const CandidatDetail = () => {
-  const { id } = useParams();
-  const [candidat, setCandidat] = useState(null);
+  const { id } = useParams<{ id: string }>();
+  const [candidat, setCandidat] = useState<Candidat | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [photoIndex, setPhotoIndex] = useState(0);
@@ -49,12 +57,26 @@ const CandidatDetail = () => {
     const fetchCandidat = async () => {
       setLoading(true);
       try {
-        const response = await axios.get(`${API_URL}/candidats/${id}`);
-        const data = response.data.data || response.data;
-        if (!data || !data.id) {
+        const response = await fetch(`${API_URL}/candidats/${id}`, {
+          headers: {
+            Accept: "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          if (response.status === 404) {
+            setNotFound(true);
+          }
+          throw new Error(`Erreur HTTP: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const candidatData = data.data || data;
+        
+        if (!candidatData || !candidatData.id) {
           setNotFound(true);
         } else {
-          setCandidat(data);
+          setCandidat(candidatData);
         }
       } catch (err) {
         console.error("Erreur chargement candidat:", err);
@@ -68,7 +90,10 @@ const CandidatDetail = () => {
 
   /* Construction des photos */
   const photos = candidat
-    ? [candidat.photo1, candidat.photo2].filter(Boolean).map(getPhotoUrl)
+    ? [candidat.photo1, candidat.photo2]
+        .filter((p): p is string => Boolean(p))
+        .map(p => getImageUrl(p))
+        .filter((url): url is string => Boolean(url))
     : [];
 
   /* Défilement automatique */
@@ -84,7 +109,12 @@ const CandidatDetail = () => {
   if (loading) {
     return (
       <div className="py-20 bg-background min-h-screen flex items-center justify-center">
-        <Loader2 size={40} className="animate-spin text-primary" />
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+        >
+          <Loader2 size={40} className="text-primary" />
+        </motion.div>
       </div>
     );
   }
@@ -143,7 +173,9 @@ const CandidatDetail = () => {
                   className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
                     index === photoIndex ? "opacity-100" : "opacity-0"
                   }`}
-                  onError={(e) => { e.target.style.display = "none"; }}
+                  onError={(e) => { 
+                    e.currentTarget.style.display = "none"; 
+                  }}
                 />
               ))
             ) : (
@@ -168,6 +200,7 @@ const CandidatDetail = () => {
                         ? "w-4 h-2 bg-yellow-400 rounded-full"
                         : "w-2 h-2 bg-white/70 rounded-full hover:bg-white"
                     }`}
+                    aria-label={`Voir photo ${i + 1}`}
                   />
                 ))}
               </div>
@@ -179,12 +212,14 @@ const CandidatDetail = () => {
                 <button
                   onClick={photoPrecedente}
                   className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/50 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity z-20 hover:bg-black/70"
+                  aria-label="Photo précédente"
                 >
                   <ChevronLeft size={20} />
                 </button>
                 <button
                   onClick={photoSuivante}
                   className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/50 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity z-20 hover:bg-black/70"
+                  aria-label="Photo suivante"
                 >
                   <ChevronRight size={20} />
                 </button>
@@ -222,6 +257,16 @@ const CandidatDetail = () => {
                   <Award size={16} className="text-primary" />
                   <span className="text-sm">N°{candidat.numero}</span>
                 </div>
+                {candidat.age && (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <span className="text-sm">{candidat.age} ans</span>
+                  </div>
+                )}
+                {candidat.ville && (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <span className="text-sm">{candidat.ville}</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -236,6 +281,21 @@ const CandidatDetail = () => {
               </p>
             </div>
 
+            {/* Description / Talents */}
+            {(candidat.description || candidat.talent) && (
+              <div className="bg-card border border-border rounded-xl p-4">
+                {candidat.talent && (
+                  <div className="mb-3">
+                    <span className="text-sm font-semibold text-foreground">Talent: </span>
+                    <span className="text-sm text-primary">{candidat.talent}</span>
+                  </div>
+                )}
+                {candidat.description && (
+                  <p className="text-sm text-muted-foreground leading-relaxed">{candidat.description}</p>
+                )}
+              </div>
+            )}
+
             {/* Votes */}
             <div className="bg-gradient-to-br from-primary/10 to-transparent border border-primary/20 rounded-xl p-6">
               <div className="flex items-center justify-between mb-2">
@@ -243,15 +303,12 @@ const CandidatDetail = () => {
                   <Heart size={24} className="text-yellow-400 fill-yellow-400" />
                   <span className="text-sm text-muted-foreground">Votes</span>
                 </div>
-                <span className="text-sm text-primary font-semibold">
-                  {Number(candidat.votes_count ?? 0).toLocaleString()} votes
-                </span>
               </div>
               <p className="text-5xl font-bold text-primary font-display mb-2">
                 {Number(candidat.votes_count ?? 0).toLocaleString()}
               </p>
               <p className="text-sm text-muted-foreground">
-                
+                {candidat.votes_count === 0 ? "Soyez le premier à voter !" : "votes"}
               </p>
             </div>
 
@@ -287,6 +344,7 @@ const CandidatDetail = () => {
                 allowFullScreen
                 title={`Vidéo de présentation - ${candidat.nom}`}
                 loading="lazy"
+                referrerPolicy="no-referrer"
               />
             </div>
           </motion.div>

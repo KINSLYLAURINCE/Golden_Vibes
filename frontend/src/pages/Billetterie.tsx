@@ -12,15 +12,8 @@ import {
 import { Link } from "react-router-dom";
 import axios from "axios";
 
-const API_URL = "http://localhost:8000/api";
-const STORAGE_URL = "http://localhost:8000/storage";
+import { API_URL, getImageUrl } from "@/services/api";
 
-const getImageUrl = (image: string | null | undefined) => {
-  if (!image) return null;
-  if (typeof image !== "string") return null;
-  if (image.startsWith("http")) return image;
-  return `${STORAGE_URL}/${image}`;
-};
 
 interface Pack {
   id: number;
@@ -203,7 +196,7 @@ const Billetterie = () => {
                   const presqueComplet = rest < p.places_disponibles * 0.1;
                   const PackIcon = PACK_ICONS[p.nom] || Ticket;
                   const avantages = Array.isArray(p.avantages) ? p.avantages : [];
-                  const imageUrl = getImageUrl(p.image);
+                  const imageUrl = getImageUrl(p.image); // 
 
                   return (
                     <motion.div
@@ -214,7 +207,6 @@ const Billetterie = () => {
                       viewport={{ once: true }}
                       transition={{ delay: i * 0.1 }}
                     >
-                      {/* Badge */}
                       {presqueComplet && (
                         <div className="absolute top-2 right-2 z-10">
                           <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1 animate-pulse">
@@ -223,7 +215,7 @@ const Billetterie = () => {
                         </div>
                       )}
 
-                      {/* ✅ Image ou header coloré */}
+                      {/* Image ou header coloré */}
                       {imageUrl ? (
                         <div className="w-full h-40 overflow-hidden relative">
                           <img
@@ -232,7 +224,6 @@ const Billetterie = () => {
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                             onError={(e: any) => { e.target.style.display = "none"; }}
                           />
-                          {/* Overlay avec nom du pack */}
                           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-3">
                             <span className="text-white text-sm font-bold uppercase tracking-wider">{p.nom}</span>
                           </div>
@@ -307,7 +298,7 @@ const Billetterie = () => {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-lg mx-auto">
             <div className="bg-card rounded-xl border border-border overflow-hidden mb-6">
 
-              {/* Image ou header */}
+              {/*  Image ou header */}
               {getImageUrl(pack.image) ? (
                 <div className="w-full h-36 overflow-hidden">
                   <img
@@ -445,14 +436,17 @@ const Billetterie = () => {
             <div className="bg-card rounded-xl border border-border p-6">
               <h3 className="font-display text-xl text-foreground mb-4">Paiement sécurisé</h3>
 
-              {/* Récapitulatif avec image miniature */}
+              {/*  Récapitulatif avec image miniature */}
               <div className="bg-secondary rounded-lg p-4 mb-6">
                 <p className="text-sm text-muted-foreground mb-3">Récapitulatif</p>
                 <div className="flex items-center gap-3 mb-3">
                   {getImageUrl(pack.image) ? (
-                    <img src={getImageUrl(pack.image)!} alt={pack.nom}
+                    <img
+                      src={getImageUrl(pack.image)!}
+                      alt={pack.nom}
                       className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
-                      onError={(e: any) => { e.target.style.display = "none"; }} />
+                      onError={(e: any) => { e.target.style.display = "none"; }}
+                    />
                   ) : (
                     <div className="w-12 h-12 rounded-lg gold-gradient flex items-center justify-center flex-shrink-0">
                       <Package size={20} className="text-primary-foreground" />

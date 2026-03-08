@@ -1,29 +1,25 @@
 /**
- * Configuration globale d'Axios
+ * Configuration globale des URLs
  * -----------------------------------------
- * Point d'entrée unique pour toutes les requêtes HTTP.
- * L'intercepteur ajoute automatiquement le jeton JWT
- * stocké dans le localStorage à chaque requête.
+ * Utilise les variables d'environnement Vite.
+ * À importer dans tous les fichiers à la place
+ * des URLs hardcodées.
  */
 
-import axios from "axios";
+export const API_URL =
+  import.meta.env.VITE_API_URL ?? "http://localhost:1002/api";
 
-/* ---- Instance Axios ---- */
-const api = axios.create({
-  baseURL: "http://localhost:8000/api", // Changer en production
-  headers: {
-    "Content-Type": "application/json",
-    Accept: "application/json",
-  },
-});
+export const STORAGE_URL =
+  import.meta.env.VITE_STORAGE_URL ?? "http://localhost:1002/storage";
 
-/* ---- Intercepteur de requêtes : ajout du token ---- */
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+/**
+ * Construit l'URL complète d'une image stockée.
+ * Gère les cas null, undefined, objet, et URL absolue.
+ */
+export const getImageUrl = (image: string | null | undefined): string | null => {
+  if (!image) return null;
+  if (typeof image !== "string") return null;
+  if (image.startsWith("http")) return image;
+  return `${STORAGE_URL}/${image}`;
+};
 
-export default api;

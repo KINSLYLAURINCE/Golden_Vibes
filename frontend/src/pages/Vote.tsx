@@ -4,14 +4,8 @@ import { motion } from "framer-motion";
 import { Phone, CheckCircle, Loader2, Crown, Heart } from "lucide-react";
 import axios from "axios";
 
-const API_URL = "http://localhost:8000/api";
-const STORAGE_URL = "http://localhost:8000/storage";
+import { API_URL, getImageUrl } from "@/services/api";
 
-const getPhotoUrl = (photo: string) => {
-  if (!photo) return null;
-  if (photo.startsWith("http")) return photo;
-  return `${STORAGE_URL}/${photo}`;
-};
 
 interface Candidat {
   id: number;
@@ -39,11 +33,9 @@ const Vote = () => {
   const [step, setStep] = useState(candidatIdFromUrl ? 2 : 1);
   const [loading, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [paymentUrl, setPaymentUrl] = useState("");
 
   const candidate = candidats.find((c) => c.id === selected);
 
-  /* Charger les candidats */
   useEffect(() => {
     const fetchCandidats = async () => {
       setLoadingCandidats(true);
@@ -59,14 +51,12 @@ const Vote = () => {
     fetchCandidats();
   }, []);
 
-  /* Formater numéro téléphone → format 237XXXXXXXXX */
   const formatPhone = (tel: string) => {
     const cleaned = tel.replace(/\D/g, "");
     if (cleaned.startsWith("237")) return cleaned;
     return `237${cleaned}`;
   };
 
-  /* Valider le formulaire */
   const validateStep2 = () => {
     if (!phone) { setError("Veuillez entrer votre numéro de téléphone."); return false; }
     const formatted = formatPhone(phone);
@@ -77,12 +67,10 @@ const Vote = () => {
     return true;
   };
 
-  /* Soumettre le vote */
   const handlePay = async () => {
     if (!validateStep2()) return;
     setSaving(true);
     setError("");
-
     try {
       const response = await axios.post(`${API_URL}/votes`, {
         candidat_id: selected,
@@ -90,12 +78,9 @@ const Vote = () => {
         telephone: formatPhone(phone),
         mode_paiement: payment,
       });
-
       if (response.data.success) {
         const url = response.data.data?.payment_url;
         if (url) {
-          // Rediriger vers la page de paiement NotchPay
-          setPaymentUrl(url);
           window.location.href = url;
         } else {
           setStep(3);
@@ -104,7 +89,6 @@ const Vote = () => {
         setError(response.data.message || "Erreur lors du paiement.");
       }
     } catch (err: any) {
-      console.error("Erreur vote:", err);
       setError(
         err.response?.data?.message ||
         err.response?.data?.error ||
@@ -152,38 +136,41 @@ const Vote = () => {
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                {candidats.map((c) => (
-                  <button
-                    key={c.id}
-                    onClick={() => { setSelected(c.id); setStep(2); }}
-                    className={`p-3 rounded-xl border transition-all text-left ${
-                      selected === c.id
-                        ? "border-primary bg-primary/10"
-                        : "border-border hover:border-primary/50"
-                    } bg-card`}
-                  >
-                    {getPhotoUrl(c.photo1) ? (
-                      <img
-                        src={getPhotoUrl(c.photo1)!}
-                        alt={c.nom}
-                        className="w-full aspect-square object-cover rounded-lg mb-2"
-                        onError={(e: any) => { e.target.style.display = "none"; }}
-                      />
-                    ) : (
-                      <div className="w-full aspect-square rounded-lg mb-2 bg-secondary flex items-center justify-center">
-                        <Crown size={24} className="text-muted-foreground" />
-                      </div>
-                    )}
-                    <p className="text-xs text-primary uppercase">
-                      {c.categorie} N°{c.numero}
-                    </p>
-                    <p className="text-sm font-medium text-foreground leading-tight">{c.nom}</p>
-                    <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                      <Heart size={10} className="text-yellow-400" />
-                      {Number(c.votes_count ?? 0).toLocaleString()} votes
-                    </p>
-                  </button>
-                ))}
+                {candidats.map((c) => {
+                  const photoUrl = getImageUrl(c.photo1); // ✅
+                  return (
+                    <button
+                      key={c.id}
+                      onClick={() => { setSelected(c.id); setStep(2); }}
+                      className={`p-3 rounded-xl border transition-all text-left ${
+                        selected === c.id
+                          ? "border-primary bg-primary/10"
+                          : "border-border hover:border-primary/50"
+                      } bg-card`}
+                    >
+                      {photoUrl ? (
+                        <img
+                          src={photoUrl}
+                          alt={c.nom}
+                          className="w-full aspect-square object-cover rounded-lg mb-2"
+                          onError={(e: any) => { e.target.style.display = "none"; }}
+                        />
+                      ) : (
+                        <div className="w-full aspect-square rounded-lg mb-2 bg-secondary flex items-center justify-center">
+                          <Crown size={24} className="text-muted-foreground" />
+                        </div>
+                      )}
+                      <p className="text-xs text-primary uppercase">
+                        {c.categorie} N°{c.numero}
+                      </p>
+                      <p className="text-sm font-medium text-foreground leading-tight">{c.nom}</p>
+                      <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                        <Heart size={10} className="text-yellow-400" />
+                        {Number(c.votes_count ?? 0).toLocaleString()} votes
+                      </p>
+                    </button>
+                  );
+                })}
               </div>
             )}
           </motion.div>
@@ -195,9 +182,9 @@ const Vote = () => {
 
             {/* Candidat sélectionné */}
             <div className="flex items-center gap-4 p-4 bg-card rounded-xl border border-border">
-              {getPhotoUrl(candidate.photo1) ? (
+              {getImageUrl(candidate.photo1) ? ( // ✅
                 <img
-                  src={getPhotoUrl(candidate.photo1)!}
+                  src={getImageUrl(candidate.photo1)!}
                   alt={candidate.nom}
                   className="w-16 h-16 rounded-lg object-cover"
                   onError={(e: any) => { e.target.style.display = "none"; }}
@@ -271,10 +258,7 @@ const Vote = () => {
                   type="tel"
                   placeholder="6XX XXX XXX"
                   value={phone}
-                  onChange={(e) => {
-                    setPhone(e.target.value);
-                    setError("");
-                  }}
+                  onChange={(e) => { setPhone(e.target.value); setError(""); }}
                   className="w-full pl-9 pr-4 py-3 bg-secondary border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                 />
               </div>
@@ -362,9 +346,7 @@ const Vote = () => {
             <div className="w-20 h-20 gold-gradient rounded-full flex items-center justify-center mx-auto mb-6">
               <CheckCircle size={40} className="text-primary-foreground" />
             </div>
-            <h2 className="font-display text-2xl text-foreground mb-2">
-              Vote envoyé !
-            </h2>
+            <h2 className="font-display text-2xl text-foreground mb-2">Vote envoyé !</h2>
             <p className="text-muted-foreground mb-2">
               {quantity} vote(s) pour{" "}
               <span className="text-primary font-semibold">{candidate?.nom}</span>

@@ -15,12 +15,25 @@ import {
   ChevronDown, CheckCheck, Handshake,
   User, Building2
 } from "lucide-react";
-import axios from "axios";
 
-const API_URL = "http://localhost:8000/api";
+
+import { API_URL } from "@/services/api";
+
+// Types
+interface Message {
+  id: number;
+  nom: string;
+  email: string;
+  telephone?: string;
+  objet: 'candidature' | 'partenariat' | 'info' | 'reclamation' | 'autre';
+  message: string;
+  statut: 'lu' | 'non_lu';
+  created_at: string;
+  updated_at?: string;
+}
 
 // ── Labels & couleurs par objet ───────────────────────────────────────────────
-const OBJETS_LABELS = {
+const OBJETS_LABELS: Record<string, string> = {
   candidature: "Candidature",
   partenariat: "Partenariat",
   info:        "Information",
@@ -28,7 +41,7 @@ const OBJETS_LABELS = {
   autre:       "Autre",
 };
 
-const OBJETS_COLORS = {
+const OBJETS_COLORS: Record<string, string> = {
   candidature: "text-blue-400 bg-blue-400/10 border-blue-400/20",
   partenariat: "text-amber-400 bg-amber-400/10 border-amber-400/20",
   info:        "text-cyan-400 bg-cyan-400/10 border-cyan-400/20",
@@ -38,7 +51,7 @@ const OBJETS_COLORS = {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const fmtDate = (d) => {
+const fmtDate = (d: string): string => {
   if (!d) return "";
   try {
     const dt = new Date(d);
@@ -52,12 +65,12 @@ const fmtDate = (d) => {
   }
 };
 
-const fmtDay = (d) => {
+const fmtDay = (d: string): string => {
   if (!d) return "";
   try {
     const dt  = new Date(d);
     const now = new Date();
-    const diff = Math.floor((now - dt) / 86400000);
+    const diff = Math.floor((now.getTime() - dt.getTime()) / 86400000);
     if (diff === 0) return "Aujourd'hui";
     if (diff === 1) return "Hier";
     return dt.toLocaleDateString("fr-FR", { day: "2-digit", month: "short" });
@@ -82,7 +95,7 @@ const parsePartenaireMessage = (message = "") => {
 };
 
 // ── Badge objet ───────────────────────────────────────────────────────────────
-const ObjetBadge = ({ objet, size = "sm" }) => {
+const ObjetBadge = ({ objet, size = "sm" }: { objet: string; size?: "sm" | "md" }) => {
   const cls = OBJETS_COLORS[objet] ?? "text-muted-foreground bg-secondary border-border";
   const isPartenariat = objet === "partenariat";
   return (
@@ -99,33 +112,37 @@ const ObjetBadge = ({ objet, size = "sm" }) => {
 
 // ── Composant principal ───────────────────────────────────────────────────────
 const Messages = () => {
-  const [messages,     setMessages]     = useState([]);
-  const [loading,      setLoading]      = useState(true);
-  const [refreshing,   setRefreshing]   = useState(false);
-  const [selected,     setSelected]     = useState(null);
-  const [recherche,    setRecherche]    = useState("");
-  const [filtreObjet,  setFiltreObjet]  = useState("tous");
-  const [filtreStatut, setFiltreStatut] = useState("tous");
-  const [deleting,     setDeleting]     = useState(false);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [selected, setSelected] = useState<Message | null>(null);
+  const [recherche, setRecherche] = useState("");
+  const [filtreObjet, setFiltreObjet] = useState<string>("tous");
+  const [filtreStatut, setFiltreStatut] = useState<string>("tous");
+  const [deleting, setDeleting] = useState(false);
 
   const token = localStorage.getItem("token");
-  const axiosConfig = {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept:        "application/json",
-    },
-  };
 
   // ── Chargement ──────────────────────────────────────────────────────────────
   const fetchMessages = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
-    else         setRefreshing(true);
+    else setRefreshing(true);
+    
     try {
-      const response = await axios.get(`${API_URL}/admin/messages`, axiosConfig);
-      const data = response.data?.data ?? response.data;
+      const response = await fetch(`${API_URL}/admin/messages`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+        },
+      });
+
+      if (!response.ok) throw new Error('Erreur réseau');
+      
+      const responseData = await response.json();
+      const data = responseData?.data ?? responseData;
       const sorted = [...(Array.isArray(data) ? data : [])].sort((a, b) => {
         if (a.statut !== b.statut) return a.statut === "non_lu" ? -1 : 1;
-        return new Date(b.created_at) - new Date(a.created_at);
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       });
       setMessages(sorted);
     } catch (err) {
@@ -134,26 +151,26 @@ const Messages = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [token]);
 
   useEffect(() => { fetchMessages(); }, [fetchMessages]);
 
   // ── Stats ───────────────────────────────────────────────────────────────────
-  const nonLus         = messages.filter((m) => m.statut === "non_lu").length;
-  const total          = messages.length;
+  const nonLus = messages.filter((m) => m.statut === "non_lu").length;
+  const total = messages.length;
   const nbPartenariats = messages.filter((m) => m.objet === "partenariat").length;
 
   // ── Filtres ─────────────────────────────────────────────────────────────────
   const filtres = messages
-    .filter((m) => filtreObjet  === "tous" || m.objet  === filtreObjet)
+    .filter((m) => filtreObjet === "tous" || m.objet === filtreObjet)
     .filter((m) => filtreStatut === "tous" || m.statut === filtreStatut)
     .filter((m) => {
       if (!recherche) return true;
       const q = recherche.toLowerCase();
       return (
-        (m.nom       ?? "").toLowerCase().includes(q) ||
-        (m.email     ?? "").toLowerCase().includes(q) ||
-        (m.message   ?? "").toLowerCase().includes(q) ||
+        (m.nom ?? "").toLowerCase().includes(q) ||
+        (m.email ?? "").toLowerCase().includes(q) ||
+        (m.message ?? "").toLowerCase().includes(q) ||
         (m.telephone ?? "").toLowerCase().includes(q)
       );
     });
@@ -168,11 +185,23 @@ const Messages = () => {
 
   // ── Actions ──────────────────────────────────────────────────────────────────
 
-  const marquerLu = async (id) => {
+  const marquerLu = async (id: number) => {
     const msg = messages.find((m) => m.id === id);
     if (!msg || msg.statut === "lu") return;
+    
     try {
-      await axios.put(`${API_URL}/admin/messages/${id}/lire`, {}, axiosConfig);
+      const response = await fetch(`${API_URL}/admin/messages/${id}/lire`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          Accept: "application/json",
+        },
+        body: JSON.stringify({})
+      });
+
+      if (!response.ok) throw new Error('Erreur réseau');
+
       setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, statut: "lu" } : m)));
     } catch (err) {
       console.error("Erreur marquer lu:", err);
@@ -182,22 +211,42 @@ const Messages = () => {
   const marquerTousLus = async () => {
     const ids = messages.filter((m) => m.statut === "non_lu").map((m) => m.id);
     if (!ids.length) return;
+    
     try {
-      await Promise.all(ids.map((id) =>
-        axios.put(`${API_URL}/admin/messages/${id}/lire`, {}, axiosConfig)
-      ));
+      await Promise.all(ids.map(async (id) => {
+        await fetch(`${API_URL}/admin/messages/${id}/lire`, {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            Accept: "application/json",
+          },
+          body: JSON.stringify({})
+        });
+      }));
+      
       setMessages((prev) => prev.map((m) => ({ ...m, statut: "lu" })));
-      if (selected) setSelected((s) => ({ ...s, statut: "lu" }));
+      if (selected) setSelected((s) => s ? { ...s, statut: "lu" } : null);
     } catch (err) {
       console.error("Erreur marquer tous lus:", err);
     }
   };
 
-  const supprimer = async (id) => {
+  const supprimer = async (id: number) => {
     if (!window.confirm("Supprimer ce message définitivement ?")) return;
     setDeleting(true);
+    
     try {
-      await axios.delete(`${API_URL}/admin/messages/${id}`, axiosConfig);
+      const response = await fetch(`${API_URL}/admin/messages/${id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+        },
+      });
+
+      if (!response.ok) throw new Error('Erreur réseau');
+
       setMessages((prev) => prev.filter((m) => m.id !== id));
       if (selected?.id === id) setSelected(null);
     } catch (err) {
@@ -208,12 +257,12 @@ const Messages = () => {
     }
   };
 
-  const ouvrir = (msg) => {
+  const ouvrir = (msg: Message) => {
     marquerLu(msg.id);
     setSelected({ ...msg, statut: "lu" });
   };
 
-  const repondre = (email, objet, nom) => {
+  const repondre = (email: string, objet: string, nom: string) => {
     const sujet = objet === "partenariat"
       ? `Re: Demande de partenariat – ${nom}`
       : `Re: ${OBJETS_LABELS[objet] ?? objet}`;
@@ -323,7 +372,7 @@ const Messages = () => {
 
   // ── Rendu principal ──────────────────────────────────────────────────────────
   return (
-    <div>
+    <div className="relative">
       {/* ── Header ── */}
       <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
         <div>

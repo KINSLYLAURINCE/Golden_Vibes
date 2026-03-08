@@ -12,14 +12,7 @@ import { motion } from "framer-motion";
 import { Search, Crown, Eye, Heart, ChevronLeft, ChevronRight, Play, Loader2, ArrowUpDown } from "lucide-react";
 import axios from "axios";
 
-const API_URL = "http://localhost:8000/api";
-const STORAGE_URL = "http://localhost:8000/storage";
-
-const getPhotoUrl = (photo) => {
-  if (!photo) return null;
-  if (photo.startsWith("http")) return photo;
-  return `${STORAGE_URL}/${photo}`;
-};
+import { API_URL, getImageUrl } from "@/services/api";
 
 const Candidats = () => {
   const [candidats, setCandidats] = useState([]);
@@ -181,7 +174,7 @@ const CandidatCard = ({ candidat: c, delay }) => {
   // Construction des photos depuis la BDD (photo1 + photo2)
   const photos = [c.photo1, c.photo2]
     .filter(Boolean)
-    .map((p) => getPhotoUrl(p));
+    .map((p) => getImageUrl(p));
 
   const totalImages = photos.length;
 

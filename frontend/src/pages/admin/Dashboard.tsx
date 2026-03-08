@@ -7,46 +7,100 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Users, Crown, Ticket, MessageSquare, TrendingUp, DollarSign, Loader2 } from "lucide-react";
+import { 
+  Users, Crown, Ticket, MessageSquare, TrendingUp, 
+  DollarSign, Loader2 
+} from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell
 } from "recharts";
-import axios from "axios";
 
-const API_URL = "http://localhost:8000/api";
+import { API_URL } from "@/services/api";  
 
 const COLORS_PIE = ["#FFD700", "#B8860B", "#666", "#444", "#333"];
 
+// Types
+interface Stats {
+  total_candidats?: number;
+  total_candidats_miss?: number;
+  total_candidats_master?: number;
+  total_votes?: number;
+  montant_votes?: number;
+  billets_vendus?: number;
+  revenus_billets?: number;
+  messages_non_lus?: number;
+  top_candidats?: Array<{
+    id: number;
+    nom: string;
+    numero: number;
+    votes_count: number;
+  }>;
+}
+
+interface StatsVotesEvolution {
+  date: string;
+  votes: number;
+}
+
+interface StatsVotesParCandidat {
+  id: number;
+  nom: string;
+  total_votes: number;
+}
+
+interface StatsVotes {
+  evolution?: StatsVotesEvolution[];
+  par_candidat?: StatsVotesParCandidat[];
+}
+
 const Dashboard = () => {
-  const [stats, setStats] = useState(null);
-  const [statsVotes, setStatsVotes] = useState(null);
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [statsVotes, setStatsVotes] = useState<StatsVotes | null>(null);
   const [loading, setLoading] = useState(true);
-  const [periode, setPeriode] = useState("7j");
+  const [periode, setPeriode] = useState<"7j" | "30j" | "all">("7j");
 
   const token = localStorage.getItem("token");
-  const axiosConfig = {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: "application/json",
-    },
+
+  // Helper function for API calls with auth headers
+  const fetchWithAuth = async (endpoint: string) => {
+    const response = await fetch(`${API_URL}${endpoint}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+    });
+    
+    if (!response.ok) {
+      if (response.status === 401) {
+        // Handle unauthorized
+        localStorage.removeItem("token");
+        window.location.href = "/login";
+        throw new Error("Session expirée");
+      }
+      throw new Error(`Erreur ${response.status}`);
+    }
+    
+    const data = await response.json();
+    return data.data || data;
   };
 
-  /* Charger les stats principales */
+  // Charger les stats principales
   const fetchStats = async () => {
     try {
-      const response = await axios.get(`${API_URL}/admin/stats`, axiosConfig);
-      setStats(response.data.data || response.data);
+      const data = await fetchWithAuth('/admin/stats');
+      setStats(data);
     } catch (err) {
       console.error("Erreur stats:", err);
     }
   };
 
-  /* Charger les stats votes */
-  const fetchStatsVotes = async (p = periode) => {
+  // Charger les stats votes
+  const fetchStatsVotes = async (p: string = periode) => {
     try {
-      const response = await axios.get(`${API_URL}/admin/stats/votes?periode=${p}`, axiosConfig);
-      setStatsVotes(response.data.data || response.data);
+      const data = await fetchWithAuth(`/admin/stats/votes?periode=${p}`);
+      setStatsVotes(data);
     } catch (err) {
       console.error("Erreur stats votes:", err);
     }
@@ -55,8 +109,13 @@ const Dashboard = () => {
   useEffect(() => {
     const init = async () => {
       setLoading(true);
-      await Promise.all([fetchStats(), fetchStatsVotes()]);
-      setLoading(false);
+      try {
+        await Promise.all([fetchStats(), fetchStatsVotes()]);
+      } catch (error) {
+        console.error("Error loading dashboard data:", error);
+      } finally {
+        setLoading(false);
+      }
     };
     init();
   }, []);
@@ -65,23 +124,28 @@ const Dashboard = () => {
     fetchStatsVotes(periode);
   }, [periode]);
 
-  /* Formatter l'évolution pour le graphique */
+  // Formatter l'évolution pour le graphique
   const evolutionData = statsVotes?.evolution?.map((e) => ({
     jour: new Date(e.date).toLocaleDateString("fr-FR", { weekday: "short" }),
     votes: e.votes,
   })) || [];
 
-  /* Formatter les packs pour le camembert */
+  // Formatter les packs pour le camembert
   const ventesPackData = statsVotes?.par_candidat?.slice(0, 5).map((c, i) => ({
     nom: c.nom,
     valeur: c.total_votes || 0,
-    couleur: COLORS_PIE[i],
+    couleur: COLORS_PIE[i % COLORS_PIE.length],
   })) || [];
 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-32">
-        <Loader2 size={40} className="animate-spin text-primary" />
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+        >
+          <Loader2 size={40} className="text-primary" />
+        </motion.div>
       </div>
     );
   }
@@ -113,7 +177,9 @@ const Dashboard = () => {
       value: stats?.messages_non_lus ?? "—",
       detail: `${stats?.messages_non_lus ?? 0} non lu(s)`,
       icon: MessageSquare,
-      couleur: stats?.messages_non_lus > 0 ? "text-destructive" : "text-primary",
+      couleur: stats?.messages_non_lus && stats.messages_non_lus > 0 
+        ? "text-destructive" 
+        : "text-primary",
     },
     {
       label: "Revenus Votes",
@@ -132,7 +198,7 @@ const Dashboard = () => {
   ];
 
   return (
-    <div>
+    <div className="py-6">
       <h1 className="font-display text-3xl gold-text mb-2">Tableau de Bord</h1>
       <p className="text-muted-foreground mb-8">Vue d'ensemble de Golden Vibes Events</p>
 
@@ -141,7 +207,7 @@ const Dashboard = () => {
         {statsCards.map((stat, i) => (
           <motion.div
             key={stat.label}
-            className="bg-card border border-border rounded-xl p-5 flex items-start gap-4"
+            className="bg-card border border-border rounded-xl p-5 flex items-start gap-4 hover:border-primary/50 transition-all"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.05 }}
@@ -166,7 +232,7 @@ const Dashboard = () => {
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-display text-lg text-foreground">Évolution des Votes</h3>
             <div className="flex gap-1">
-              {["7j", "30j", "all"].map((p) => (
+              {(["7j", "30j", "all"] as const).map((p) => (
                 <button
                   key={p}
                   onClick={() => setPeriode(p)}
@@ -176,7 +242,7 @@ const Dashboard = () => {
                       : "border-border text-muted-foreground hover:border-primary/50"
                   }`}
                 >
-                  {p === "all" ? "Tout" : p}
+                  {p === "all" ? "Tout" : p === "7j" ? "7 jours" : "30 jours"}
                 </button>
               ))}
             </div>
@@ -190,8 +256,15 @@ const Dashboard = () => {
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={evolutionData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(0 0% 20%)" />
-                <XAxis dataKey="jour" stroke="hsl(0 0% 60%)" fontSize={12} />
-                <YAxis stroke="hsl(0 0% 60%)" fontSize={12} />
+                <XAxis 
+                  dataKey="jour" 
+                  stroke="hsl(0 0% 60%)" 
+                  fontSize={12} 
+                />
+                <YAxis 
+                  stroke="hsl(0 0% 60%)" 
+                  fontSize={12} 
+                />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "hsl(0 0% 8%)",
@@ -200,7 +273,11 @@ const Dashboard = () => {
                   }}
                   labelStyle={{ color: "hsl(0 0% 95%)" }}
                 />
-                <Bar dataKey="votes" fill="hsl(43 72% 55%)" radius={[4, 4, 0, 0]} />
+                <Bar 
+                  dataKey="votes" 
+                  fill="hsl(43 72% 55%)" 
+                  radius={[4, 4, 0, 0]} 
+                />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -223,13 +300,18 @@ const Dashboard = () => {
                   outerRadius={80}
                   dataKey="valeur"
                   nameKey="nom"
-                  label={({ nom, valeur }) => `${nom.split(" ")[0]}: ${valeur}`}
+                  label={({ nom, valeur }) => {
+                    const shortName = nom.split(" ")[0] || nom;
+                    return `${shortName}: ${valeur}`;
+                  }}
                 >
                   {ventesPackData.map((entry, index) => (
-                    <Cell key={index} fill={entry.couleur} />
+                    <Cell key={`cell-${index}`} fill={entry.couleur} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip 
+                  formatter={(value: any) => [`${value} votes`, 'Votes']}
+                />
               </PieChart>
             </ResponsiveContainer>
           )}
@@ -240,11 +322,19 @@ const Dashboard = () => {
       <div className="bg-card border border-border rounded-xl p-6">
         <h3 className="font-display text-lg text-foreground mb-4">🏆 Top 5 Candidats</h3>
         {!stats?.top_candidats || stats.top_candidats.length === 0 ? (
-          <p className="text-muted-foreground text-sm text-center py-6">Aucun candidat pour l'instant.</p>
+          <p className="text-muted-foreground text-sm text-center py-6">
+            Aucun candidat pour l'instant.
+          </p>
         ) : (
           <div className="space-y-3">
-            {stats.top_candidats.map((c, i) => (
-              <div key={c.id} className="flex items-center gap-4 p-3 bg-secondary rounded-lg">
+            {stats.top_candidats.slice(0, 5).map((c, i) => (
+              <motion.div 
+                key={c.id} 
+                className="flex items-center gap-4 p-3 bg-secondary rounded-lg hover:bg-secondary/80 transition-colors"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.1 }}
+              >
                 <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
                   i === 0 ? "gold-gradient text-primary-foreground" : "bg-muted text-muted-foreground"
                 }`}>
@@ -257,7 +347,7 @@ const Dashboard = () => {
                 <span className="text-primary font-bold shrink-0">
                   {Number(c.votes_count ?? 0).toLocaleString()} votes
                 </span>
-              </div>
+              </motion.div>
             ))}
           </div>
         )}
