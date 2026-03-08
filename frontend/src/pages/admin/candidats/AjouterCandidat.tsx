@@ -9,9 +9,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, Upload, Save, Loader2 } from "lucide-react";
-import axios from "axios";
 
-const API_URL = "http://localhost:1002/api";
+import { API_URL } from "@/services/api";
 
 const AjouterCandidat = () => {
   const navigate = useNavigate();
@@ -25,7 +24,10 @@ const AjouterCandidat = () => {
     statut: "actif",
   });
   
-  const [photos, setPhotos] = useState({
+  const [photos, setPhotos] = useState<{
+    photo1: File | null;
+    photo2: File | null;
+  }>({
     photo1: null,
     photo2: null
   });
@@ -36,39 +38,40 @@ const AjouterCandidat = () => {
   });
 
   /* Mise à jour des champs texte */
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+    setError("");
   };
 
   /* Gestion des fichiers photos */
-  const handlePhotoChange = (e, photoNumber) => {
-    const file = e.target.files[0];
-    if (file) {
-      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
-      if (!allowedTypes.includes(file.type)) {
-        setError("Format de fichier non supporté. Utilisez JPG ou PNG.");
-        return;
-      }
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>, photoNumber: 'photo1' | 'photo2') => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-      if (file.size > 5 * 1024 * 1024) {
-        setError("Le fichier ne doit pas dépasser 5 Mo.");
-        return;
-      }
-
-      setError("");
-      
-      setPhotos(prev => ({ ...prev, [photoNumber]: file }));
-
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPhotoPreviews(prev => ({ ...prev, [photoNumber]: reader.result }));
-      };
-      reader.readAsDataURL(file);
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    if (!allowedTypes.includes(file.type)) {
+      setError("Format de fichier non supporté. Utilisez JPG ou PNG.");
+      return;
     }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Le fichier ne doit pas dépasser 5 Mo.");
+      return;
+    }
+
+    setError("");
+    
+    setPhotos(prev => ({ ...prev, [photoNumber]: file }));
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPhotoPreviews(prev => ({ ...prev, [photoNumber]: reader.result as string }));
+    };
+    reader.readAsDataURL(file);
   };
 
   /* Soumission du formulaire */
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!form.categorie) {
@@ -95,7 +98,6 @@ const AjouterCandidat = () => {
     setError("");
 
     try {
-      //  Récupération du bon token
       const token = localStorage.getItem('token');
       
       if (!token) {
@@ -110,36 +112,30 @@ const AjouterCandidat = () => {
       formData.append('categorie', form.categorie);
       formData.append('video', form.video);
       formData.append('statut', form.statut);
-      formData.append('votes_count', 0);
+      formData.append('votes_count', '0');
       
       if (photos.photo1) formData.append('photo1', photos.photo1);
       if (photos.photo2) formData.append('photo2', photos.photo2);
 
-      const response = await axios.post(
-        `${API_URL}/admin/candidats`,
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-            'Authorization': `Bearer ${token}`
-          }
-        }
-      );
+      const response = await fetch(`${API_URL}/admin/candidats`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
 
-      if (response.data.success) {
+      const data = await response.json();
+
+      if (response.ok && data.success) {
         alert("Candidat ajouté avec succès !");
         navigate("/admin/candidats");
       } else {
-        setError(response.data.message || "Erreur lors de l'ajout du candidat");
+        setError(data.message || data.error || "Erreur lors de l'ajout du candidat");
       }
     } catch (err) {
       console.error("Erreur complète:", err);
-      setError(
-        err.response?.data?.message || 
-        err.response?.data?.error ||
-        err.message ||
-        "Une erreur est survenue lors de l'ajout du candidat"
-      );
+      setError("Une erreur est survenue lors de l'ajout du candidat");
     } finally {
       setLoading(false);
     }
@@ -178,7 +174,7 @@ const AjouterCandidat = () => {
             Catégorie <span className="text-red-500">*</span>
           </label>
           <div className="flex gap-3">
-            {["miss", "master"].map((cat) => (
+            {(["miss", "master"] as const).map((cat) => (
               <button
                 key={cat}
                 type="button"
@@ -233,7 +229,7 @@ const AjouterCandidat = () => {
 
         {/* Photos */}
         <div className="grid grid-cols-2 gap-4">
-          {[1, 2].map((n) => (
+          {([1, 2] as const).map((n) => (
             <div key={n}>
               <label className="block text-sm text-muted-foreground mb-2">
                 Photo {n} {n === 1 ? <span className="text-red-500">*</span> : <span className="text-muted-foreground/50">(optionnelle)</span>}

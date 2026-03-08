@@ -13,10 +13,8 @@ import {
   X, Save, Copy, Filter, Loader2, Upload,
   AlertCircle, CheckCircle, Info
 } from "lucide-react";
-import axios from "axios";
 
-const API_URL = "http://localhost:1002/api";
-const STORAGE_URL = "http://localhost:1002/storage";
+import { API_URL, STORAGE_URL, getImageUrl } from "@/services/api";
 
 interface EvenementPhoto {
   id: number;
@@ -39,13 +37,24 @@ interface Evenement {
   updated_at?: string;
 }
 
+interface AlertState {
+  show: boolean;
+  type: 'success' | 'error' | 'info';
+  message: string;
+}
+
 const villesCameroun = [
   "Dschang", "Douala", "Yaoundé", "Bafoussam", "Bamenda",
   "Buea", "Limbé", "Kribi", "Garoua", "Maroua",
   "Bertoua", "Ebolowa", "Ngaoundéré",
 ];
 
-const statutLabels = { a_venir: "À venir", en_cours: "En cours", termine: "Terminé" };
+const statutLabels = { 
+  a_venir: "À venir", 
+  en_cours: "En cours", 
+  termine: "Terminé" 
+};
+
 const statutColors = {
   a_venir: "bg-blue-500/20 text-blue-400",
   en_cours: "bg-green-500/20 text-green-400",
@@ -73,7 +82,7 @@ const ListeEvenements = () => {
   const [form, setForm] = useState(emptyForm);
   const [filtreStatut, setFiltreStatut] = useState<string>("tous");
   const [error, setError] = useState("");
-  const [alert, setAlert] = useState({ show: false, type: "", message: "" });
+  const [alert, setAlert] = useState<AlertState>({ show: false, type: "success", message: "" });
 
   // Photos : nouvelles à uploader
   const [newPhotos, setNewPhotos] = useState<File[]>([]);
@@ -84,17 +93,11 @@ const ListeEvenements = () => {
   const [photosToDelete, setPhotosToDelete] = useState<number[]>([]);
 
   const token = localStorage.getItem("token");
-  const axiosConfig = {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: "application/json",
-    },
-  };
 
-  const showAlert = (type: string, message: string) => {
+  const showAlert = (type: 'success' | 'error' | 'info', message: string) => {
     setAlert({ show: true, type, message });
     setTimeout(() => {
-      setAlert({ show: false, type: "", message: "" });
+      setAlert({ show: false, type: "success", message: "" });
     }, 5000);
   };
 
@@ -102,9 +105,17 @@ const ListeEvenements = () => {
   const fetchEvenements = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${API_URL}/admin/evenements`, axiosConfig);
-      setEvenements(response.data.data || response.data);
-      // Pas d'alerte ici
+      const response = await fetch(`${API_URL}/admin/evenements`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+        },
+      });
+      
+      if (!response.ok) throw new Error('Erreur réseau');
+      
+      const data = await response.json();
+      setEvenements(data.data || data);
     } catch (err) {
       console.error("Erreur chargement événements:", err);
       showAlert("error", "Impossible de charger les événements");
@@ -122,12 +133,13 @@ const ListeEvenements = () => {
     .filter((e) => filtreStatut === "tous" || e.statut === filtreStatut)
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-  const handleChange = (e: any) => setForm({ ...form, [e.target.name]: e.target.value });
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
 
-  /* URL photo */
+  /* URL photo - Utilise getImageUrl depuis les services */
   const getPhotoUrl = (photo: string) => {
-    if (photo.startsWith("http")) return photo;
-    return `${STORAGE_URL}/${photo}`;
+    return getImageUrl(photo) || '';
   };
 
   /* Ouvrir formulaire */
@@ -181,7 +193,7 @@ const ListeEvenements = () => {
   };
 
   /* Gestion nouvelles photos */
-  const handlePhotos = (e: any) => {
+  const handlePhotos = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []) as File[];
     const total = existingPhotos.length - photosToDelete.length + newPhotos.length + files.length;
 
@@ -237,7 +249,7 @@ const ListeEvenements = () => {
   };
 
   /* Sauvegarder */
-  const sauvegarder = async (e: any) => {
+  const sauvegarder = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     setError("");
@@ -265,45 +277,43 @@ const ListeEvenements = () => {
         });
       }
 
+      let url = `${API_URL}/admin/evenements`;
+      let method = 'POST';
+
       if (editId) {
-        formData.append("_method", "POST");
-        const response = await axios.post(
-          `${API_URL}/admin/evenements/${editId}`,
-          formData,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "multipart/form-data",
-            },
-          }
-        );
-        const updated = response.data.data || response.data;
+        url = `${API_URL}/admin/evenements/${editId}`;
+        formData.append("_method", "POST"); // Laravel method spoofing
+      }
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || data.error || "Erreur lors de la sauvegarde");
+      }
+
+      if (editId) {
+        const updated = data.data || data;
         setEvenements((prev) =>
           prev.map((ev) => (ev.id === editId ? updated : ev))
         );
         showAlert("success", "Événement modifié avec succès");
       } else {
-        const response = await axios.post(
-          `${API_URL}/admin/evenements`,
-          formData,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "multipart/form-data",
-            },
-          }
-        );
-        setEvenements((prev) => [...prev, response.data.data || response.data]);
+        setEvenements((prev) => [...prev, data.data || data]);
         showAlert("success", "Événement créé avec succès");
       }
 
       setShowForm(false);
     } catch (err: any) {
       console.error("Erreur sauvegarde:", err);
-      const msg =
-        err.response?.data?.message ||
-        err.response?.data?.error ||
-        "Une erreur est survenue";
+      const msg = err.message || "Une erreur est survenue";
       setError(msg);
       showAlert("error", msg);
     } finally {
@@ -315,7 +325,16 @@ const ListeEvenements = () => {
   const supprimer = async (id: number) => {
     if (!window.confirm("Supprimer cet événement ?")) return;
     try {
-      await axios.delete(`${API_URL}/admin/evenements/${id}`, axiosConfig);
+      const response = await fetch(`${API_URL}/admin/evenements/${id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+        },
+      });
+
+      if (!response.ok) throw new Error('Erreur lors de la suppression');
+
       setEvenements((prev) => prev.filter((e) => e.id !== id));
       showAlert("success", "Événement supprimé avec succès");
     } catch (err) {
@@ -327,10 +346,13 @@ const ListeEvenements = () => {
   /* Format date */
   const fmtDate = (d: string) =>
     new Date(d).toLocaleDateString("fr-FR", {
-      weekday: "short", day: "numeric", month: "short", year: "numeric",
+      weekday: "short", 
+      day: "numeric", 
+      month: "short", 
+      year: "numeric",
     });
 
-  // Configuration des types d'alertes en OR
+  // Configuration des types d'alertes
   const alertConfig = {
     success: {
       icon: CheckCircle,
@@ -468,7 +490,7 @@ const ListeEvenements = () => {
                   <motion.button
                     whileHover={{ scale: 1.1, rotate: 90 }}
                     whileTap={{ scale: 0.9 }}
-                    onClick={() => setAlert({ show: false, type: "", message: "" })}
+                    onClick={() => setAlert({ show: false, type: "success", message: "" })}
                     className="p-1 rounded-lg hover:bg-white/10 transition-colors"
                   >
                     <X size={16} className="text-white/70" />
@@ -509,7 +531,7 @@ const ListeEvenements = () => {
       {/* Filtres */}
       <div className="flex items-center gap-2 mb-4">
         <Filter size={16} className="text-muted-foreground" />
-        {["tous", "a_venir", "en_cours", "termine"].map((s) => (
+        {(["tous", "a_venir", "en_cours", "termine"] as const).map((s) => (
           <motion.button
             key={s}
             whileHover={{ scale: 1.05 }}
@@ -521,7 +543,7 @@ const ListeEvenements = () => {
                 : "border-border text-muted-foreground hover:border-primary/50"
             }`}
           >
-            {s === "tous" ? "Tous" : statutLabels[s as keyof typeof statutLabels]}
+            {s === "tous" ? "Tous" : statutLabels[s]}
           </motion.button>
         ))}
       </div>
@@ -589,7 +611,7 @@ const ListeEvenements = () => {
                             src={getPhotoUrl(p.photo)}
                             alt=""
                             className="w-8 h-8 rounded-full object-cover border-2 border-card cursor-pointer"
-                            onError={(e: any) => { e.target.style.display = "none"; }}
+                            onError={(e) => { e.currentTarget.style.display = "none"; }}
                           />
                         ))}
                         {evt.photos.length > 3 && (
@@ -739,7 +761,7 @@ const ListeEvenements = () => {
                         src={getPhotoUrl(p.photo)}
                         alt=""
                         className="rounded-lg w-full aspect-video object-cover border border-border cursor-pointer"
-                        onError={(e: any) => { e.target.style.display = "none"; }}
+                        onError={(e) => { e.currentTarget.style.display = "none"; }}
                       />
                     ))}
                   </div>
@@ -803,21 +825,39 @@ const ListeEvenements = () => {
               {/* Nom */}
               <div>
                 <label className="block text-sm text-muted-foreground mb-1">Nom de l'événement *</label>
-                <input type="text" name="nom" value={form.nom} onChange={handleChange} required
-                  className="w-full px-4 py-2.5 bg-secondary border border-border rounded-lg text-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
+                <input 
+                  type="text" 
+                  name="nom" 
+                  value={form.nom} 
+                  onChange={handleChange} 
+                  required
+                  className="w-full px-4 py-2.5 bg-secondary border border-border rounded-lg text-foreground focus:outline-none focus:ring-1 focus:ring-primary" 
+                />
               </div>
 
               {/* Date + Heure */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm text-muted-foreground mb-1">Date *</label>
-                  <input type="date" name="date" value={form.date} onChange={handleChange} required
-                    className="w-full px-4 py-2.5 bg-secondary border border-border rounded-lg text-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
+                  <input 
+                    type="date" 
+                    name="date" 
+                    value={form.date} 
+                    onChange={handleChange} 
+                    required
+                    className="w-full px-4 py-2.5 bg-secondary border border-border rounded-lg text-foreground focus:outline-none focus:ring-1 focus:ring-primary" 
+                  />
                 </div>
                 <div>
                   <label className="block text-sm text-muted-foreground mb-1">Heure *</label>
-                  <input type="time" name="heure" value={form.heure} onChange={handleChange} required
-                    className="w-full px-4 py-2.5 bg-secondary border border-border rounded-lg text-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
+                  <input 
+                    type="time" 
+                    name="heure" 
+                    value={form.heure} 
+                    onChange={handleChange} 
+                    required
+                    className="w-full px-4 py-2.5 bg-secondary border border-border rounded-lg text-foreground focus:outline-none focus:ring-1 focus:ring-primary" 
+                  />
                 </div>
               </div>
 
@@ -825,14 +865,24 @@ const ListeEvenements = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm text-muted-foreground mb-1">Lieu précis *</label>
-                  <input type="text" name="lieu" value={form.lieu} onChange={handleChange} required
+                  <input 
+                    type="text" 
+                    name="lieu" 
+                    value={form.lieu} 
+                    onChange={handleChange} 
+                    required
                     placeholder="Ex: Hôtel Meumi Palace"
-                    className="w-full px-4 py-2.5 bg-secondary border border-border rounded-lg text-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
+                    className="w-full px-4 py-2.5 bg-secondary border border-border rounded-lg text-foreground focus:outline-none focus:ring-1 focus:ring-primary" 
+                  />
                 </div>
                 <div>
                   <label className="block text-sm text-muted-foreground mb-1">Ville *</label>
-                  <select name="ville" value={form.ville} onChange={handleChange}
-                    className="w-full px-4 py-2.5 bg-secondary border border-border rounded-lg text-foreground focus:outline-none focus:ring-1 focus:ring-primary">
+                  <select 
+                    name="ville" 
+                    value={form.ville} 
+                    onChange={handleChange}
+                    className="w-full px-4 py-2.5 bg-secondary border border-border rounded-lg text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  >
                     {villesCameroun.map((v) => <option key={v} value={v}>{v}</option>)}
                   </select>
                 </div>
@@ -841,16 +891,26 @@ const ListeEvenements = () => {
               {/* Thème */}
               <div>
                 <label className="block text-sm text-muted-foreground mb-1">Thème</label>
-                <input type="text" name="theme" value={form.theme} onChange={handleChange}
+                <input 
+                  type="text" 
+                  name="theme" 
+                  value={form.theme} 
+                  onChange={handleChange}
                   placeholder='Ex : "Élégance Africaine"'
-                  className="w-full px-4 py-2.5 bg-secondary border border-border rounded-lg text-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
+                  className="w-full px-4 py-2.5 bg-secondary border border-border rounded-lg text-foreground focus:outline-none focus:ring-1 focus:ring-primary" 
+                />
               </div>
 
               {/* Description */}
               <div>
                 <label className="block text-sm text-muted-foreground mb-1">Description</label>
-                <textarea name="description" value={form.description} onChange={handleChange} rows={4}
-                  className="w-full px-4 py-2.5 bg-secondary border border-border rounded-lg text-foreground focus:outline-none focus:ring-1 focus:ring-primary resize-none" />
+                <textarea 
+                  name="description" 
+                  value={form.description} 
+                  onChange={handleChange} 
+                  rows={4}
+                  className="w-full px-4 py-2.5 bg-secondary border border-border rounded-lg text-foreground focus:outline-none focus:ring-1 focus:ring-primary resize-none" 
+                />
               </div>
 
               {/* Photos existantes (mode édition) */}
@@ -871,7 +931,7 @@ const ListeEvenements = () => {
                               ? "border-red-500 opacity-40"
                               : "border-border"
                           }`}
-                          onError={(e: any) => { e.target.style.display = "none"; }}
+                          onError={(e) => { e.currentTarget.style.display = "none"; }}
                         />
                         <motion.button
                           whileHover={{ scale: 1.2 }}
@@ -908,8 +968,12 @@ const ListeEvenements = () => {
                 </label>
                 <div className="border-2 border-dashed border-border rounded-lg p-4 text-center">
                   <input
-                    type="file" multiple accept="image/jpeg,image/jpg,image/png"
-                    onChange={handlePhotos} className="hidden" id="photo-upload"
+                    type="file" 
+                    multiple 
+                    accept="image/jpeg,image/jpg,image/png"
+                    onChange={handlePhotos} 
+                    className="hidden" 
+                    id="photo-upload"
                   />
                   <label htmlFor="photo-upload" className="cursor-pointer flex flex-col items-center gap-2 text-muted-foreground hover:text-primary transition-colors">
                     <Upload size={24} />
@@ -923,13 +987,15 @@ const ListeEvenements = () => {
                       <div key={i} className="relative group">
                         <motion.img
                           whileHover={{ scale: 1.05 }}
-                          src={preview} alt=""
+                          src={preview} 
+                          alt=""
                           className="rounded-lg w-full aspect-square object-cover border border-border"
                         />
                         <motion.button
                           whileHover={{ scale: 1.2 }}
                           whileTap={{ scale: 0.9 }}
-                          type="button" onClick={() => removeNewPhoto(i)}
+                          type="button" 
+                          onClick={() => removeNewPhoto(i)}
                           className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
                         >
                           <X size={12} />
@@ -943,8 +1009,12 @@ const ListeEvenements = () => {
               {/* Statut */}
               <div>
                 <label className="block text-sm text-muted-foreground mb-1">Statut</label>
-                <select name="statut" value={form.statut} onChange={handleChange}
-                  className="w-full px-4 py-2.5 bg-secondary border border-border rounded-lg text-foreground focus:outline-none focus:ring-1 focus:ring-primary">
+                <select 
+                  name="statut" 
+                  value={form.statut} 
+                  onChange={handleChange}
+                  className="w-full px-4 py-2.5 bg-secondary border border-border rounded-lg text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                >
                   <option value="a_venir">À venir</option>
                   <option value="en_cours">En cours</option>
                   <option value="termine">Terminé</option>
@@ -956,15 +1026,20 @@ const ListeEvenements = () => {
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  type="button" onClick={() => setShowForm(false)} disabled={saving}
-                  className="flex-1 border border-border text-muted-foreground py-2.5 rounded-lg hover:bg-secondary transition-colors disabled:opacity-50">
+                  type="button" 
+                  onClick={() => setShowForm(false)} 
+                  disabled={saving}
+                  className="flex-1 border border-border text-muted-foreground py-2.5 rounded-lg hover:bg-secondary transition-colors disabled:opacity-50"
+                >
                   Annuler
                 </motion.button>
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  type="submit" disabled={saving}
-                  className="flex-1 gold-gradient text-primary-foreground py-2.5 rounded-lg font-semibold flex items-center justify-center gap-2 disabled:opacity-50">
+                  type="submit" 
+                  disabled={saving}
+                  className="flex-1 gold-gradient text-primary-foreground py-2.5 rounded-lg font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
+                >
                   {saving ? (
                     <><Loader2 size={16} className="animate-spin" /> En cours...</>
                   ) : (

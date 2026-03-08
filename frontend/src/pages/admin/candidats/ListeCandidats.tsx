@@ -12,32 +12,41 @@ import {
   Plus, Search, Eye, Edit, Trash2, ToggleLeft, ToggleRight, Loader2,
   AlertCircle, CheckCircle, Info, X
 } from "lucide-react";
-import axios from "axios";
 
-const API_URL = "http://localhost:1002/api";
-const STORAGE_URL = "http://localhost:1002/storage";
+import { API_URL, STORAGE_URL, getImageUrl } from "@/services/api";
+
+interface Candidat {
+  id: number;
+  numero: number;
+  nom: string;
+  categorie: 'miss' | 'master';
+  photo1?: string;
+  photo2?: string;
+  video?: string;
+  votes_count: number;
+  statut: 'actif' | 'inactif';
+}
+
+interface AlertState {
+  show: boolean;
+  type: 'success' | 'error' | 'info';
+  message: string;
+}
 
 const ListeCandidats = () => {
-  const [candidats, setCandidats] = useState([]);
+  const [candidats, setCandidats] = useState<Candidat[]>([]);
   const [recherche, setRecherche] = useState("");
-  const [filtre, setFiltre] = useState("tous");
+  const [filtre, setFiltre] = useState<"tous" | "miss" | "master">("tous");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [alert, setAlert] = useState({ show: false, type: "", message: "" });
+  const [alert, setAlert] = useState<AlertState>({ show: false, type: "success", message: "" });
 
   const token = localStorage.getItem("token");
 
-  const axiosConfig = {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: "application/json",
-    },
-  };
-
-  const showAlert = (type, message) => {
+  const showAlert = (type: 'success' | 'error' | 'info', message: string) => {
     setAlert({ show: true, type, message });
     setTimeout(() => {
-      setAlert({ show: false, type: "", message: "" });
+      setAlert({ show: false, type: "success", message: "" });
     }, 5000);
   };
 
@@ -45,9 +54,17 @@ const ListeCandidats = () => {
     setLoading(true);
     setError("");
     try {
-      const response = await axios.get(`${API_URL}/admin/candidats`, axiosConfig);
-      setCandidats(response.data.data || response.data);
-      // Pas d'alerte ici
+      const response = await fetch(`${API_URL}/admin/candidats`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+        },
+      });
+      
+      if (!response.ok) throw new Error('Erreur réseau');
+      
+      const data = await response.json();
+      setCandidats(data.data || data);
     } catch (err) {
       console.error("Erreur chargement candidats:", err);
       setError("Impossible de charger les candidats.");
@@ -69,16 +86,23 @@ const ListeCandidats = () => {
         String(c.numero).includes(recherche)
     );
 
-  const toggleActif = async (id, statutActuel) => {
+  const toggleActif = async (id: number, statutActuel: string) => {
     const nouveauStatut = statutActuel === "actif" ? "inactif" : "actif";
     try {
-      await axios.patch(
-        `${API_URL}/admin/candidats/${id}/statut`,
-        { statut: nouveauStatut },
-        axiosConfig
-      );
+      const response = await fetch(`${API_URL}/admin/candidats/${id}/statut`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          Accept: "application/json",
+        },
+        body: JSON.stringify({ statut: nouveauStatut })
+      });
+
+      if (!response.ok) throw new Error('Erreur réseau');
+
       setCandidats((prev) =>
-        prev.map((c) => (c.id === id ? { ...c, statut: nouveauStatut } : c))
+        prev.map((c) => (c.id === id ? { ...c, statut: nouveauStatut as 'actif' | 'inactif' } : c))
       );
       showAlert("success", `Candidat ${nouveauStatut === "actif" ? "activé" : "désactivé"} avec succès`);
     } catch (err) {
@@ -87,10 +111,19 @@ const ListeCandidats = () => {
     }
   };
 
-  const supprimer = async (id) => {
+  const supprimer = async (id: number) => {
     if (!window.confirm("Êtes-vous sûr de vouloir supprimer ce candidat ?")) return;
     try {
-      await axios.delete(`${API_URL}/admin/candidats/${id}`, axiosConfig);
+      const response = await fetch(`${API_URL}/admin/candidats/${id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+        },
+      });
+
+      if (!response.ok) throw new Error('Erreur réseau');
+
       setCandidats((prev) => prev.filter((c) => c.id !== id));
       showAlert("success", "Candidat supprimé avec succès");
     } catch (err) {
@@ -99,14 +132,7 @@ const ListeCandidats = () => {
     }
   };
 
-  /* ✅ Construction correcte de l'URL photo depuis le storage Laravel */
-  const getPhotoUrl = (photo) => {
-    if (!photo) return null;
-    if (photo.startsWith("http")) return photo;
-    return `${STORAGE_URL}/${photo}`;
-  };
-
-  // Configuration des types d'alertes en OR
+  // Configuration des types d'alertes
   const alertConfig = {
     success: {
       icon: CheckCircle,
@@ -244,7 +270,7 @@ const ListeCandidats = () => {
                   <motion.button
                     whileHover={{ scale: 1.1, rotate: 90 }}
                     whileTap={{ scale: 0.9 }}
-                    onClick={() => setAlert({ show: false, type: "", message: "" })}
+                    onClick={() => setAlert({ show: false, type: "success", message: "" })}
                     className="p-1 rounded-lg hover:bg-white/10 transition-colors"
                   >
                     <X size={16} className="text-white/70" />
@@ -297,7 +323,7 @@ const ListeCandidats = () => {
           />
         </div>
         <div className="flex gap-2">
-          {["tous", "miss", "master"].map((f) => (
+          {(["tous", "miss", "master"] as const).map((f) => (
             <button
               key={f}
               onClick={() => setFiltre(f)}
@@ -358,21 +384,27 @@ const ListeCandidats = () => {
                   whileHover={{ scale: 1.002, backgroundColor: "rgba(255,215,0,0.02)" }}
                 >
                   <td className="px-4 py-3">
-                    {getPhotoUrl(c.photo1) ? (
+                    {getImageUrl(c.photo1) ? (
                       <motion.img
                         whileHover={{ scale: 1.2 }}
-                        src={getPhotoUrl(c.photo1)}
+                        src={getImageUrl(c.photo1) || ''}
                         alt={c.nom}
                         className="w-10 h-10 rounded-lg object-cover cursor-pointer"
                         onError={(e) => {
-                          e.target.style.display = "none";
-                          e.target.nextSibling.style.display = "flex";
+                          e.currentTarget.style.display = "none";
+                          const parent = e.currentTarget.parentElement;
+                          if (parent) {
+                            const placeholder = parent.querySelector('.photo-placeholder');
+                            if (placeholder) {
+                              (placeholder as HTMLElement).style.display = 'flex';
+                            }
+                          }
                         }}
                       />
                     ) : null}
                     <div
-                      className="w-10 h-10 rounded-lg bg-secondary border border-border items-center justify-center text-xs text-muted-foreground"
-                      style={{ display: "none" }}
+                      className="photo-placeholder w-10 h-10 rounded-lg bg-secondary border border-border items-center justify-center text-xs text-muted-foreground"
+                      style={{ display: !getImageUrl(c.photo1) ? 'flex' : 'none' }}
                     >
                       ?
                     </div>

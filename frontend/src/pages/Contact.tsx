@@ -5,19 +5,16 @@ import {
   Twitter, MessageCircle, CheckCircle, Loader2, AlertCircle
 } from "lucide-react";
 
-// ─── Config ───────────────────────────────────────────────────────────────────
-const API_URL = "http://localhost:1002/api";
+import { API_URL } from "@/services/api";
 
-// Valeurs attendues par le backend (in:candidature,partenariat,info,reclamation,autre)
 const subjects = [
-  { label: "Candidature",  value: "candidature"  },
-  { label: "Partenariat",  value: "partenariat"  },
-  { label: "Information",  value: "info"          },
-  { label: "Réclamation",  value: "reclamation"  },
-  { label: "Autre",        value: "autre"         },
+  { label: "Candidature", value: "candidature" },
+  { label: "Partenariat", value: "partenariat" },
+  { label: "Information", value: "info"         },
+  { label: "Réclamation", value: "reclamation" },
+  { label: "Autre",       value: "autre"        },
 ];
 
-// ─── Types ────────────────────────────────────────────────────────────────────
 interface FormState {
   nom: string;
   prenom: string;
@@ -31,17 +28,14 @@ const defaultForm: FormState = {
   nom: "", prenom: "", email: "", telephone: "", objet: "", message: "",
 };
 
-// ─── Animations ───────────────────────────────────────────────────────────────
 const fadeUp = {
   hidden:  { opacity: 0, y: 20 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" as const } },
 };
 
-// ─── Input class ─────────────────────────────────────────────────────────────
 const inputCls =
   "w-full px-4 py-3 bg-secondary border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary transition-all text-sm";
 
-// ─── Contact Page ─────────────────────────────────────────────────────────────
 const Contact = () => {
   const [form, setForm]       = useState<FormState>(defaultForm);
   const [sending, setSending] = useState(false);
@@ -64,7 +58,6 @@ const Contact = () => {
       const res = await fetch(`${API_URL}/contact`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Accept": "application/json" },
-        // Le backend attend "nom" (on concatène prénom + nom si besoin)
         body: JSON.stringify({
           nom:       `${form.prenom} ${form.nom}`.trim(),
           email:     form.email,
@@ -77,7 +70,6 @@ const Contact = () => {
       const json = await res.json();
 
       if (!res.ok) {
-        // Laravel retourne les erreurs de validation dans json.errors
         if (json.errors) {
           const first = Object.values(json.errors as Record<string, string[]>)[0][0];
           throw new Error(first);
@@ -94,7 +86,6 @@ const Contact = () => {
     }
   };
 
-  // ── Écran succès ──────────────────────────────────────────────────────────
   if (sent) {
     return (
       <div className="py-20 bg-background min-h-screen flex items-center justify-center px-4">
@@ -122,7 +113,6 @@ const Contact = () => {
     );
   }
 
-  // ── Formulaire ────────────────────────────────────────────────────────────
   return (
     <div className="py-12 bg-background min-h-screen">
       <div className="container mx-auto px-4">
@@ -141,7 +131,6 @@ const Contact = () => {
             initial="hidden"
             animate="visible"
           >
-            {/* Nom / Prénom */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm text-muted-foreground mb-1">Prénom *</label>
@@ -159,7 +148,6 @@ const Contact = () => {
               </div>
             </div>
 
-            {/* Email */}
             <div>
               <label className="block text-sm text-muted-foreground mb-1">Email *</label>
               <input
@@ -168,7 +156,6 @@ const Contact = () => {
               />
             </div>
 
-            {/* Téléphone */}
             <div>
               <label className="block text-sm text-muted-foreground mb-1">Téléphone *</label>
               <input
@@ -177,7 +164,6 @@ const Contact = () => {
               />
             </div>
 
-            {/* Objet */}
             <div>
               <label className="block text-sm text-muted-foreground mb-1">Objet *</label>
               <select
@@ -191,7 +177,6 @@ const Contact = () => {
               </select>
             </div>
 
-            {/* Message */}
             <div>
               <label className="block text-sm text-muted-foreground mb-1">Message *</label>
               <textarea
@@ -201,7 +186,6 @@ const Contact = () => {
               />
             </div>
 
-            {/* Erreur API */}
             <AnimatePresence>
               {error && (
                 <motion.div
@@ -214,7 +198,6 @@ const Contact = () => {
               )}
             </AnimatePresence>
 
-            {/* Bouton submit */}
             <motion.button
               type="submit"
               disabled={sending}
@@ -242,14 +225,13 @@ const Contact = () => {
             transition={{ delay: 0.15 }}
             className="space-y-6"
           >
-            {/* Coordonnées */}
             <div className="bg-card rounded-xl border border-border p-6 space-y-4">
               <h3 className="font-display text-xl text-foreground">Informations</h3>
               {[
-                { icon: MapPin,  text: "Dschang, Cameroun" },
-                { icon: Phone,   text: "652 430 272 / 599 159 058" },
-                { icon: Mail,    text: "contact@goldenvibes-events.com" },
-                { icon: Clock,   text: "Lun - Sam : 8h00 - 18h00" },
+                { icon: MapPin, text: "Dschang, Cameroun"              },
+                { icon: Phone,  text: "652 430 272 / 599 159 058"      },
+                { icon: Mail,   text: "contact@goldenvibes-events.com" },
+                { icon: Clock,  text: "Lun - Sam : 8h00 - 18h00"      },
               ].map((item, i) => (
                 <div key={i} className="flex items-center gap-3 text-sm text-muted-foreground">
                   <item.icon size={18} className="text-primary shrink-0" />
@@ -258,7 +240,6 @@ const Contact = () => {
               ))}
             </div>
 
-            {/* Réseaux sociaux */}
             <div className="bg-card rounded-xl border border-border p-6">
               <h3 className="font-display text-xl text-foreground mb-4">Réseaux sociaux</h3>
               <div className="flex gap-3">
@@ -268,8 +249,10 @@ const Contact = () => {
                   { icon: Twitter,       label: "Twitter",   href: "#" },
                   { icon: MessageCircle, label: "WhatsApp",  href: "#" },
                 ].map(s => (
-                  <a
-                    key={s.label} href={s.href} title={s.label}
+                  <a                                             
+                    key={s.label}
+                    href={s.href}
+                    title={s.label}
                     className="w-12 h-12 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary transition-colors"
                   >
                     <s.icon size={20} />
@@ -278,7 +261,6 @@ const Contact = () => {
               </div>
             </div>
 
-            {/* Carte */}
             <div className="bg-card rounded-xl border border-border overflow-hidden h-48">
               <iframe
                 src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d31838.89!2d10.05!3d5.44!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNcKwMjYnMjQuMCJOIDEwwrAwMycwMC4wIkU!5e0!3m2!1sfr!2scm!4v1"

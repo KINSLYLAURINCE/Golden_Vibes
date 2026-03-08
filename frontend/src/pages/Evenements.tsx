@@ -9,29 +9,34 @@ import { motion } from "framer-motion";
 import { Calendar, MapPin, Clock, Star, X, ChevronLeft, ChevronRight, Image, Loader2 } from "lucide-react";
 import axios from "axios";
 
-const API_URL = "http://localhost:1002/api";
-const STORAGE_URL = "http://localhost:1002/storage";
+import { API_URL, getImageUrl } from "@/services/api";
 
-const getPhotoUrl = (photo) => {
-  if (!photo) return null;
-  if (photo.startsWith("http")) return photo;
-  return `${STORAGE_URL}/${photo}`;
-};
-
-const formatDate = (dateStr) => {
+const formatDate = (dateStr: string) => {
   const d = new Date(dateStr);
   return d.toLocaleDateString("fr-FR", {
     weekday: "long", day: "numeric", month: "long", year: "numeric"
   });
 };
 
+interface Evenement {
+  id: number;
+  nom: string;
+  date: string;
+  heure?: string;
+  lieu?: string;
+  ville?: string;
+  theme?: string;
+  description?: string;
+  statut?: string;
+  photos: string[];
+}
+
 const Evenements = () => {
-  const [evenements, setEvenements] = useState([]);
+  const [evenements, setEvenements] = useState<Evenement[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [selectedEvent, setSelectedEvent] = useState<Evenement | null>(null);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
 
-  /* Charger les événements */
   useEffect(() => {
     const fetchEvenements = async () => {
       setLoading(true);
@@ -39,12 +44,14 @@ const Evenements = () => {
         const response = await axios.get(`${API_URL}/evenements`);
         const data = response.data.data || response.data;
 
-        // Construire les URLs des photos
-        const formatted = data.map((ev) => ({
+        // Construire les URLs des photos avec getImageUrl
+        const formatted = data.map((ev: any) => ({
           ...ev,
-          photos: (ev.photos || []).map((p) =>
-            typeof p === "string" ? getPhotoUrl(p) : getPhotoUrl(p.photo)
-          ).filter(Boolean),
+          photos: (ev.photos || [])
+            .map((p: any) =>
+              typeof p === "string" ? getImageUrl(p) : getImageUrl(p?.photo)
+            )
+            .filter(Boolean),
         }));
 
         setEvenements(formatted);
@@ -57,7 +64,7 @@ const Evenements = () => {
     fetchEvenements();
   }, []);
 
-  const openGallery = (event, photoIndex = 0) => {
+  const openGallery = (event: Evenement, photoIndex = 0) => {
     setSelectedEvent(event);
     setCurrentPhotoIndex(photoIndex);
   };
@@ -83,9 +90,8 @@ const Evenements = () => {
     }
   };
 
-  /* Clavier pour navigation galerie */
   useEffect(() => {
-    const handleKey = (e) => {
+    const handleKey = (e: KeyboardEvent) => {
       if (!selectedEvent) return;
       if (e.key === "ArrowRight") nextPhoto();
       if (e.key === "ArrowLeft") prevPhoto();
@@ -132,11 +138,10 @@ const Evenements = () => {
                       src={ev.photos[0]}
                       alt={ev.nom}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      onError={(e) => { e.target.style.display = "none"; }}
+                      onError={(e: any) => { e.target.style.display = "none"; }}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
-                    {/* Badge photos */}
                     <div className="absolute bottom-3 right-3 bg-black/60 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1 backdrop-blur-sm">
                       <Image size={14} />
                       <span>{ev.photos.length} photo{ev.photos.length > 1 ? "s" : ""}</span>
@@ -166,7 +171,6 @@ const Evenements = () => {
                     <div className="flex-1">
                       <div className="flex items-start justify-between gap-2 mb-1">
                         <h3 className="font-display text-xl text-foreground">{ev.nom}</h3>
-                        {/* Badge statut */}
                         <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${
                           ev.statut === "a_venir"
                             ? "bg-blue-500/20 text-blue-400"
@@ -214,7 +218,7 @@ const Evenements = () => {
                                 src={photo}
                                 alt={`${ev.nom} - photo ${idx + 2}`}
                                 className="w-full h-full object-cover"
-                                onError={(e) => { e.target.style.display = "none"; }}
+                                onError={(e: any) => { e.target.style.display = "none"; }}
                               />
                               {idx === 2 && ev.photos.length > 4 && (
                                 <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white text-xs font-bold">
@@ -240,7 +244,6 @@ const Evenements = () => {
           className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center"
           onClick={closeGallery}
         >
-          {/* Fermer */}
           <button
             onClick={closeGallery}
             className="absolute top-4 right-4 text-white hover:text-yellow-400 transition-colors z-10"
@@ -248,7 +251,6 @@ const Evenements = () => {
             <X size={24} />
           </button>
 
-          {/* Flèches */}
           {selectedEvent.photos.length > 1 && (
             <>
               <button
@@ -277,7 +279,6 @@ const Evenements = () => {
                 className="max-w-full max-h-[80vh] object-contain rounded-lg"
               />
 
-              {/* Infos overlay */}
               <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-6 rounded-b-lg">
                 <h3 className="text-white font-display text-xl mb-1">{selectedEvent.nom}</h3>
                 {selectedEvent.theme && (
@@ -296,12 +297,10 @@ const Evenements = () => {
                 </div>
               </div>
 
-              {/* Compteur */}
               <div className="absolute top-4 left-4 bg-black/50 text-white text-xs px-3 py-1 rounded-full">
                 {currentPhotoIndex + 1} / {selectedEvent.photos.length}
               </div>
 
-              {/* Points indicateurs */}
               {selectedEvent.photos.length > 1 && (
                 <div className="absolute bottom-24 left-1/2 -translate-x-1/2 flex gap-2 p-2 bg-black/50 rounded-full backdrop-blur-sm">
                   {selectedEvent.photos.map((_, idx) => (
