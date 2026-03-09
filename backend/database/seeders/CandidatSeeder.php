@@ -17,7 +17,7 @@ class CandidatSeeder extends Seeder
     public function run(): void
     {
         // Créer 10 Miss
-        for ($i = 1; $i <= 10; $i++) {
+        for ($i = 1; $i <= 2; $i++) {
             Candidat::create([
                 'numero' => str_pad($i, 3, '0', STR_PAD_LEFT), // 001, 002, ...
                 'nom' => 'Miss Candidate ' . $i,
@@ -31,7 +31,7 @@ class CandidatSeeder extends Seeder
         }
 
         // Créer 10 Master
-        for ($i = 11; $i <= 20; $i++) {
+        for ($i = 3; $i <= 4; $i++) {
             Candidat::create([
                 'numero' => str_pad($i, 3, '0', STR_PAD_LEFT), // 011, 012, ...
                 'nom' => 'Master Candidate ' . $i,
@@ -44,6 +44,6 @@ class CandidatSeeder extends Seeder
             ]);
         }
 
-        echo "✅ 20 candidats créés (10 Miss + 10 Master)\n";
+        echo "✅ 4 candidats créés (2 Miss + 2 Master)\n";
     }
 }
