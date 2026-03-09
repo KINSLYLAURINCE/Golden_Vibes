@@ -599,7 +599,7 @@ const Partenaires = () => {
                 </h4>
                 <div className="space-y-3 text-sm">
                   {[
-                    { label: "Email",     value: "partenariat@goldenvibes.events", href: "mailto:partenariat@goldenvibes.events" },
+                    { label: "Email",     value: "contact@goldenvibes-event.com", href: "mailto:contact@goldenvibes-event.com" },
                     { label: "Téléphone", value: "+237 652 430 272",               href: "tel:+237652430272" },
                     { label: "Adresse",   value: "Dschang, Cameroun",              href: undefined },
                   ].map(row => (
