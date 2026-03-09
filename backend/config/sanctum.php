@@ -17,7 +17,7 @@ return [
 
     'stateful' => explode(',', env('SANCTUM_STATEFUL_DOMAINS', sprintf(
         '%s%s',
-        'localhost,localhost:3000,localhost:5173,127.0.0.1,127.0.0.1:8000,::1', // Ajout de localhost:5173
+        'localhost,localhost:3000,localhost:5173,127.0.0.1,127.0.0.1:8000,::1','goldenvibes-event.com','www.goldenvibes-event.com','api.goldenvibes-event.com', // Ajout de localhost:5173
         Sanctum::currentApplicationUrlWithPort(),
     ))),
 
