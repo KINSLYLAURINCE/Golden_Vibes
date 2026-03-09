@@ -231,7 +231,7 @@ const Contact = () => {
               {[
                 { icon: MapPin, text: "Dschang, Cameroun"              },
                 { icon: Phone,  text: "652 430 272 / 599 159 058"      },
-                { icon: Mail,   text: "contact@goldenvibes-events.com" },
+                { icon: Mail,   text: "contact@goldenvibes-event.com" },
                 { icon: Clock,  text: "Lun - Sam : 8h00 - 18h00"      },
               ].map((item, i) => (
                 <div key={i} className="flex items-center gap-3 text-sm text-muted-foreground">
