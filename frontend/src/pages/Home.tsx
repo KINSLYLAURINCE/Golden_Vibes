@@ -120,7 +120,7 @@ const SectionError = ({ msg }: { msg: string }) => (
 // ─── Marquee item ─────────────────────────────────────────────────────────────
 const MarqueeItem = ({ p }: { p: Partenaire }) => {
   const [imgErr, setImgErr] = useState(false);
-  const logoUrl = getImageUrl(p.logo); // ✅
+  const logoUrl = getImageUrl(p.logo);
   const card = (
     <div className="flex flex-col items-center justify-center gap-2
       bg-card border border-border rounded-xl px-5 py-4 w-36 h-28 shrink-0
@@ -161,7 +161,7 @@ const MarqueePartenaires = ({ partenaires }: { partenaires: Partenaire[] }) => {
 
 // ─── Carte Leader ─────────────────────────────────────────────────────────────
 const LeaderCard = ({ candidat: c, delay }: { candidat: Candidat; delay: number }) => {
-  const photos = [c.photo1, c.photo2].filter(Boolean).map(p => getImageUrl(p)!).filter(Boolean); // ✅
+  const photos = [c.photo1, c.photo2].filter(Boolean).map(p => getImageUrl(p)!).filter(Boolean);
   const [idx, setIdx]       = useState(0);
   const [paused, setPaused] = useState(false);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -179,6 +179,13 @@ const LeaderCard = ({ candidat: c, delay }: { candidat: Candidat; delay: number 
     setPaused(true); setTimeout(() => setPaused(false), 5000);
   };
 
+  // Determine badge text based on position
+  const getBadgeText = () => {
+    if (c.categorie === "miss") return "LEADER MISS";
+    if (c.categorie === "master") return "LEADER MASTER";
+    return "CANDIDAT";
+  };
+
   return (
     <motion.div
       className="bg-card rounded-xl border-2 border-gold/30 overflow-hidden group hover:border-gold transition-all shadow-xl"
@@ -189,7 +196,7 @@ const LeaderCard = ({ candidat: c, delay }: { candidat: Candidat; delay: number 
       <div className="relative aspect-[3/4] overflow-hidden bg-secondary">
         <div className="absolute top-2 left-2 z-20">
           <span className="bg-gold text-primary-foreground text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-lg">
-            <Trophy size={12} /> LEADER {c.categorie === "miss" ? "MISS" : "MASTER"}
+            <Trophy size={12} /> {getBadgeText()}
           </span>
         </div>
         <div className="absolute top-2 right-2 z-10">
@@ -250,7 +257,7 @@ const LeaderCard = ({ candidat: c, delay }: { candidat: Candidat; delay: number 
 
 // ─── Carte Événement ──────────────────────────────────────────────────────────
 const EvenementCard = ({ ev, delay }: { ev: Evenement; delay: number }) => {
-  const photo = Array.isArray(ev.photos) && ev.photos.length > 0 ? getImageUrl(ev.photos[0] as string) : null; // ✅
+  const photo = Array.isArray(ev.photos) && ev.photos.length > 0 ? getImageUrl(ev.photos[0] as string) : null;
   return (
     <motion.div
       className="bg-card rounded-xl border border-border overflow-hidden group hover:border-primary/50 transition-all"
@@ -291,10 +298,8 @@ const Home = () => {
   const { data: evenements,  loading: loadingE, error: errorE } = useEvenements();
   const { data: partenaires, loading: loadingP, error: errorP } = usePartenaires();
 
-  const leaders = [
-    candidats.find(c => c.categorie === "miss"),
-    candidats.find(c => c.categorie === "master"),
-  ].filter(Boolean) as Candidat[];
+  // Get top 4 candidats for the Leaders section (sorted by votes)
+  const topCandidats = candidats.slice(0, 4);
 
   return (
     <div>
@@ -370,21 +375,23 @@ const Home = () => {
               <h2 className="font-display text-2xl sm:text-3xl gold-text">Les Leaders</h2>
               <Trophy size={24} className="text-gold" />
             </div>
-            <p className="text-sm text-muted-foreground">Miss et Master en tête des votes</p>
+            <p className="text-sm text-muted-foreground">Les 4 candidats en tête des votes</p>
           </div>
           {loadingC && <SectionLoader />}
           {errorC   && <SectionError msg={errorC} />}
-          {!loadingC && !errorC && leaders.length > 0 && (
+          {!loadingC && !errorC && topCandidats.length > 0 && (
             <>
-              <div className="hidden md:grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-                {leaders.map((c, i) => <LeaderCard key={c.id} candidat={c} delay={i * 0.1} />)}
+              {/* Desktop: 4 cards grid with original size */}
+              <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+                {topCandidats.map((c, i) => <LeaderCard key={c.id} candidat={c} delay={i * 0.1} />)}
               </div>
-              <div className="md:hidden space-y-6 max-w-sm mx-auto">
-                {leaders.map((c, i) => <LeaderCard key={c.id} candidat={c} delay={i * 0.1} />)}
+              {/* Mobile: 2 cards grid with original size */}
+              <div className="md:hidden grid grid-cols-2 gap-4 max-w-lg mx-auto">
+                {topCandidats.slice(0, 2).map((c, i) => <LeaderCard key={c.id} candidat={c} delay={i * 0.1} />)}
               </div>
             </>
           )}
-          {!loadingC && !errorC && leaders.length === 0 && (
+          {!loadingC && !errorC && topCandidats.length === 0 && (
             <p className="text-center text-muted-foreground text-sm py-8">Aucun candidat disponible pour le moment.</p>
           )}
           <div className="text-center mt-8">
@@ -534,7 +541,7 @@ const Home = () => {
             <Link to="/billetterie" className="flex items-center gap-2 border border-primary text-primary px-6 py-3 rounded-lg font-semibold text-sm uppercase tracking-wider hover:bg-primary/10 transition-colors">
               <Ticket size={18} /> Billetterie
             </Link>
-            <Link to="/candidats" className="flex items-center gap-2 border border-primary text-primary px-6 py-3 rounded-lg font-semibold text-sm uppercase tracking-wider hover:bg-primary/10 transition-colors">
+            <Link to="/vote" className="flex items-center gap-2 border border-primary text-primary px-6 py-3 rounded-lg font-semibold text-sm uppercase tracking-wider hover:bg-primary/10 transition-colors">
               <Heart size={18} /> Voter
             </Link>
           </div>
