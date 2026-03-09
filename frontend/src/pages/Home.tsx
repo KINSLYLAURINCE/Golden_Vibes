@@ -392,7 +392,7 @@ const Home = () => {
             </>
           )}
           {!loadingC && !errorC && topCandidats.length === 0 && (
-            <p className="text-center text-muted-foreground text-sm py-8">Aucun candidat disponible pour le moment.</p>
+            <p className="text-center text-muted-foreground text-sm py-8">Aucun candidat disponible pour le moment(0).</p>
           )}
           <div className="text-center mt-8">
             <Link to="/candidats" className="inline-flex items-center gap-1 text-primary text-sm font-medium hover:underline">
