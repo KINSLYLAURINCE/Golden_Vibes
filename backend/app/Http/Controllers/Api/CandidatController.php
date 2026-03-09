@@ -11,7 +11,11 @@ class CandidatController extends Controller
     // GET /api/candidats
     public function index(Request $request)
     {
-        $query = Candidat::where('statut', 'actif');
+        // Charger les candidats avec le comptage des votes validés uniquement
+        $query = Candidat::where('statut', 'actif')
+            ->withCount(['votes' => function($q) {
+                $q->where('statut', 'valide');
+            }]);
 
         // Filtre par catégorie
         if ($request->has('categorie')) {
@@ -30,7 +34,13 @@ class CandidatController extends Controller
         // Tri
         $sortBy = $request->get('sort', 'numero');
         $order = $request->get('order', 'asc');
-        $query->orderBy($sortBy, $order);
+        
+        // Si on trie par votes, utiliser votes_count
+        if ($sortBy === 'votes') {
+            $query->orderBy('votes_count', $order);
+        } else {
+            $query->orderBy($sortBy, $order);
+        }
 
         $candidats = $query->get();
 
@@ -43,7 +53,9 @@ class CandidatController extends Controller
     // GET /api/candidats/{id}
     public function show($id)
     {
-        $candidat = Candidat::find($id);
+        $candidat = Candidat::withCount(['votes' => function($q) {
+            $q->where('statut', 'valide');
+        }])->find($id);
 
         if (!$candidat) {
             return response()->json([
@@ -61,7 +73,14 @@ class CandidatController extends Controller
     // GET /api/candidats/{id}/votes
     public function votes($id)
     {
-        $candidat = Candidat::with('votes')->find($id);
+        $candidat = Candidat::with(['votes' => function($q) {
+            $q->where('statut', 'valide')
+              ->orderBy('created_at', 'desc');
+        }])
+        ->withCount(['votes' => function($q) {
+            $q->where('statut', 'valide');
+        }])
+        ->find($id);
 
         if (!$candidat) {
             return response()->json([
@@ -74,7 +93,7 @@ class CandidatController extends Controller
             'success' => true,
             'data' => [
                 'total_votes' => $candidat->votes_count,
-                'montant_total' => $candidat->votes_count * 100,
+                'montant_total' => $candidat->votes_count * 100, // 100 FCFA par vote
                 'historique' => $candidat->votes
             ]
         ]);
