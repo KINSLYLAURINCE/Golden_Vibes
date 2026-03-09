@@ -37,48 +37,7 @@ class EvenementSeeder extends Seeder
             'photo' => 'evenements/event1-photo2.jpg'
         ]);
 
-        // Événement 2
-        $event2 = Evenement::create([
-            'nom' => 'Bootcamp Formation & Coaching',
-            'date' => '2026-03-20',
-            'heure' => '09:00:00',
-            'lieu' => 'Hôtel Sawa',
-            'ville' => 'Douala',
-            'theme' => 'Excellence et Leadership',
-            'description' => 'Journée de formation intensive pour les candidats : coaching en communication, défilé, maintien et prise de parole en public.',
-            'statut' => 'a_venir'
-        ]);
 
-        EvenementPhoto::create([
-            'evenement_id' => $event2->id,
-            'photo' => 'evenements/event2-photo1.jpg'
-        ]);
-        EvenementPhoto::create([
-            'evenement_id' => $event2->id,
-            'photo' => 'evenements/event2-photo2.jpg'
-        ]);
-        EvenementPhoto::create([
-            'evenement_id' => $event2->id,
-            'photo' => 'evenements/event2-photo3.jpg'
-        ]);
-
-        // Événement 3
-        $event3 = Evenement::create([
-            'nom' => 'Soirée Caritative',
-            'date' => '2026-03-30',
-            'heure' => '19:00:00',
-            'lieu' => 'Centre Culturel',
-            'ville' => 'Yaoundé',
-            'theme' => 'Solidarité et Partage',
-            'description' => 'Soirée dédiée à une cause sociale. Les candidats participent à une levée de fonds pour soutenir des œuvres caritatives.',
-            'statut' => 'a_venir'
-        ]);
-
-        EvenementPhoto::create([
-            'evenement_id' => $event3->id,
-            'photo' => 'evenements/event3-photo1.jpg'
-        ]);
-
-        echo "✅ 3 événements créés avec leurs photos\n";
+        echo "✅ 1 événements créés avec leurs photos\n";
     }
 }
