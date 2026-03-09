@@ -7,10 +7,10 @@
  */
 
 export const API_URL =
-  import.meta.env.VITE_API_URL ?? "http://localhost:8000/api";
+  import.meta.env.VITE_API_URL ?? "https://api.goldenvibes-event.com";
 
 export const STORAGE_URL =
-  import.meta.env.VITE_STORAGE_URL ?? "http://localhost:8000/storage";
+  import.meta.env.VITE_STORAGE_URL ?? "https://api.goldenvibes-event.com/storage";
 
 /**
  * Construit l'URL complète d'une image stockée.
