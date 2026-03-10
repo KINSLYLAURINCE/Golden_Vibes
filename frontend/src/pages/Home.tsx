@@ -1,7 +1,3 @@
-/**
- * Page d'accueil - Golden Vibes Events
- * Sections dynamiques : Candidats leaders, Événements, Partenaires (marquee)
- */
 
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
@@ -15,13 +11,18 @@ import {
 import heroBg from "@/assets/hero-bg.jpg";
 import logo from "@/assets/logo-golden-vibes.png";
 import Countdown from "@/components/Countdown";
-import djWilly         from "@/assets/djs/dj-willy.jpg";
-import djSlimboyz      from "@/assets/djs/dj-slimboyz.jpg";
-import djSeven         from "@/assets/djs/dj-seven.jpg";
-import djZidane        from "@/assets/djs/dj-zidane.jpg";
-import djNike          from "@/assets/djs/dj-nike.jpg";
-import wizdomOg        from "@/assets/artists/wizdom-og.jpg";
-import karlixGyal      from "@/assets/artists/karlix-gyal.jpg";
+
+// DJ Imports - Correct file names
+import djKasse from "@/assets/djs/dj-kasse.jpg";
+import djNike from "@/assets/djs/dj-nike.jpg";
+import djSeven from "@/assets/djs/dj-seven.jpg";
+import djThuboGuezana from "@/assets/djs/dj-thubou_guezana.jpg";
+import djWilly from "@/assets/djs/dj-willy.jpg";
+import djZidane from "@/assets/djs/dj-zidane.jpg";
+
+// Artist Imports
+import wizdomOg from "@/assets/artists/wizdom-og.jpg";
+import karlixGyal from "@/assets/artists/karlix-gyal.jpg";
 import artisteSurprise from "@/assets/artists/artiste-surprise.jpg";
 
 import { API_URL, getImageUrl } from "@/services/api";
@@ -82,13 +83,34 @@ function usePartenaires() {
   return { data, loading, error };
 }
 
+// Updated DJs array with correct imports and display names
 const djs = [
-  { nom: "DJ Willy",           photo: djWilly    },
-  { nom: "DJ Slimboyz",        photo: djSlimboyz },
-  { nom: "DJ Seven",           photo: djSeven    },
-  { nom: "DJ Zidane",          photo: djZidane   },
-  { nom: "DJ Nike La Légende", photo: djNike     },
+  { 
+    nom: "DJ KASSE",           
+    photo: djKasse    
+  },
+  { 
+    nom: "DJ NIKE LA LÉGENDE",        
+    photo: djNike 
+  },
+  { 
+    nom: "DJ SEVEN",           
+    photo: djSeven    
+  },
+  { 
+    nom: "THUBO GUEZANA",      
+    photo: djThuboGuezana 
+  },
+  { 
+    nom: "DJ WILLY", 
+    photo: djWilly     
+  },
+  { 
+    nom: "DJ ZIDANE",          
+    photo: djZidane   
+  }
 ];
+
 const artists = [
   { nom: "Wizdom OG",        photo: wizdomOg        },
   { nom: "Karlix Gyal",      photo: karlixGyal      },
@@ -117,7 +139,7 @@ const SectionError = ({ msg }: { msg: string }) => (
   </div>
 );
 
-// ─── Marquee item ─────────────────────────────────────────────────────────────
+
 const MarqueeItem = ({ p }: { p: Partenaire }) => {
   const [imgErr, setImgErr] = useState(false);
   const logoUrl = getImageUrl(p.logo);
@@ -139,7 +161,7 @@ const MarqueeItem = ({ p }: { p: Partenaire }) => {
     : <div>{card}</div>;
 };
 
-// ─── Marquee piste ────────────────────────────────────────────────────────────
+
 const MarqueePartenaires = ({ partenaires }: { partenaires: Partenaire[] }) => {
   const items = [...partenaires, ...partenaires];
   return (
@@ -159,7 +181,7 @@ const MarqueePartenaires = ({ partenaires }: { partenaires: Partenaire[] }) => {
   );
 };
 
-// ─── Carte Leader ─────────────────────────────────────────────────────────────
+
 const LeaderCard = ({ candidat: c, delay }: { candidat: Candidat; delay: number }) => {
   const photos = [c.photo1, c.photo2].filter(Boolean).map(p => getImageUrl(p)!).filter(Boolean);
   const [idx, setIdx]       = useState(0);
@@ -179,7 +201,7 @@ const LeaderCard = ({ candidat: c, delay }: { candidat: Candidat; delay: number 
     setPaused(true); setTimeout(() => setPaused(false), 5000);
   };
 
-  // Determine badge text based on position
+
   const getBadgeText = () => {
     if (c.categorie === "miss") return "LEADER MISS";
     if (c.categorie === "master") return "LEADER MASTER";
@@ -255,7 +277,7 @@ const LeaderCard = ({ candidat: c, delay }: { candidat: Candidat; delay: number 
   );
 };
 
-// ─── Carte Événement ──────────────────────────────────────────────────────────
+
 const EvenementCard = ({ ev, delay }: { ev: Evenement; delay: number }) => {
   const photo = Array.isArray(ev.photos) && ev.photos.length > 0 ? getImageUrl(ev.photos[0] as string) : null;
   return (
@@ -292,18 +314,18 @@ const EvenementCard = ({ ev, delay }: { ev: Evenement; delay: number }) => {
   );
 };
 
-// ─── Page principale ──────────────────────────────────────────────────────────
+
 const Home = () => {
   const { data: candidats,   loading: loadingC, error: errorC } = useCandidats();
   const { data: evenements,  loading: loadingE, error: errorE } = useEvenements();
   const { data: partenaires, loading: loadingP, error: errorP } = usePartenaires();
 
-  // Get top 4 candidats for the Leaders section (sorted by votes)
+ 
   const topCandidats = candidats.slice(0, 4);
 
   return (
     <div>
-      {/* ===== 1. HERO ===== */}
+     
       <section className="relative min-h-[85vh] flex items-center justify-center overflow-hidden">
         <img src={heroBg} alt="" className="absolute inset-0 w-full h-full object-cover" />
         <div className="absolute inset-0 bg-black/75" />
@@ -344,7 +366,7 @@ const Home = () => {
         </div>
       </section>
 
-      {/* ===== 2. PRÉSENTATION ===== */}
+      
       <section className="py-16 bg-background">
         <div className="container mx-auto px-4 max-w-4xl text-center">
           <motion.h2 className="font-display text-3xl gold-text mb-6"
@@ -402,7 +424,7 @@ const Home = () => {
         </div>
       </section>
 
-      {/* ===== 4. ÉVÉNEMENTS ===== */}
+      
       <section className="py-14 bg-background">
         <div className="container mx-auto px-4">
           <h2 className="font-display text-3xl gold-text text-center mb-3">Événements Annexes</h2>
@@ -425,7 +447,7 @@ const Home = () => {
         </div>
       </section>
 
-      {/* ===== 5. LINE-UP ===== */}
+      
       <section className="py-16 bg-card">
         <div className="container mx-auto px-4">
           <h2 className="font-display text-3xl gold-text text-center mb-10">Line-Up</h2>
@@ -433,7 +455,7 @@ const Home = () => {
             <Music className="text-primary" size={24} />
             <h3 className="font-display text-xl text-foreground">DJs</h3>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 max-w-5xl mx-auto mb-12">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 max-w-5xl mx-auto mb-12">
             {djs.map((dj, i) => (
               <motion.div key={dj.nom} className="bg-background rounded-xl border border-border overflow-hidden group"
                 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
@@ -441,7 +463,9 @@ const Home = () => {
                 <div className="aspect-square overflow-hidden">
                   <img src={dj.photo} alt={dj.nom} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                 </div>
-                <div className="p-3 text-center"><p className="font-display text-sm text-foreground">{dj.nom}</p></div>
+                <div className="p-3 text-center">
+                  <p className="font-display text-sm text-foreground font-semibold">{dj.nom}</p>
+                </div>
               </motion.div>
             ))}
           </div>
@@ -458,7 +482,7 @@ const Home = () => {
                   <img src={a.photo} alt={a.nom} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                 </div>
                 <div className="p-4">
-                  <p className="font-display text-base text-foreground">{a.nom}</p>
+                  <p className="font-display text-base text-foreground font-semibold">{a.nom}</p>
                   <Star size={14} className="text-primary mx-auto mt-1" />
                 </div>
               </motion.div>
@@ -467,7 +491,7 @@ const Home = () => {
         </div>
       </section>
 
-      {/* ===== 6. TÉMOIGNAGES ===== */}
+      
       <section className="py-14 bg-background">
         <div className="container mx-auto px-4">
           <h2 className="font-display text-3xl gold-text text-center mb-10">Ce Qu'ils Disent</h2>
@@ -486,7 +510,7 @@ const Home = () => {
         </div>
       </section>
 
-      {/* ===== 7. ACTUALITÉS ===== */}
+      
       <section className="py-14 bg-card">
         <div className="container mx-auto px-4">
           <h2 className="font-display text-3xl gold-text text-center mb-10">Actualités</h2>
@@ -507,7 +531,7 @@ const Home = () => {
         </div>
       </section>
 
-      {/* ===== 8. PARTENAIRES ===== */}
+      
       <section className="py-12 bg-background">
         <div className="container mx-auto px-4 mb-8">
           <h2 className="font-display text-2xl gold-text text-center">Nos Partenaires</h2>
@@ -527,8 +551,8 @@ const Home = () => {
         </div>
       </section>
 
-      {/* ===== 9. CTA FINAL ===== */}
-      <section className="py-16 bg-card text-center">
+     
+      <section className="py-16 bg-card text-center"> 
         <div className="container mx-auto px-4">
           <h2 className="font-display text-3xl gold-text mb-4">Prêt à Briller ?</h2>
           <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
