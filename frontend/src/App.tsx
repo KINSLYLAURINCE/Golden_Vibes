@@ -27,6 +27,11 @@ import Partenaires from "@/pages/Partenaires";
 import Contact from "@/pages/Contact";
 import Evenements from "@/pages/Evenements";
 import NotFound from "@/pages/NotFound";
+import VoteSuccess from "@/pages/VoteSuccess";
+import VoteCancel from "@/pages/VoteCancel";
+import BilletSuccess from "@/pages/BilletSuccess";
+import BilletCancel from "@/pages/BilletCancel";
+
 
 /* Pages administration */
 import Login from "@/pages/admin/Login";
@@ -60,6 +65,14 @@ const App = () => (
             <Route element={<PublicLayout><Partenaires /></PublicLayout>} path="/partenaires" />
             <Route element={<PublicLayout><Evenements /></PublicLayout>} path="/evenements" />
             <Route element={<PublicLayout><Contact /></PublicLayout>} path="/contact" />
+
+            {/* ===== Routes de retour paiement ===== */}
+            //Votes
+            <Route element={<PublicLayout><VoteSuccess /></PublicLayout>} path="/vote/success" />
+            <Route element={<PublicLayout><VoteCancel /></PublicLayout>} path="/vote/cancel" />
+            // Billets
+            <Route element={<PublicLayout><BilletSuccess /></PublicLayout>} path="/billetterie/success" />
+            <Route element={<PublicLayout><VoteCancel /></PublicLayout>} path="/billetterie/cancel" />
 
             {/* ===== Connexion admin ===== */}
             <Route path="/admin/login" element={<Login />} />
