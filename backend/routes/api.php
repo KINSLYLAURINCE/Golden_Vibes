@@ -49,6 +49,9 @@ Route::post('/votes/callback/notchpay', [VoteController::class, 'callbackNotchPa
 // Webhook NotchPay pour billets
 Route::post('/billets/callback/notchpay', [BilletController::class, 'callbackNotchPay']);
 
+Route::get('/votes/check/{transaction_id}', [VoteController::class, 'checkVote']);
+// Vérifier statut d'un billet
+Route::get('/billets/check/{transaction_id}', [BilletController::class, 'checkBillet']);
 
 // Billetterie
 Route::get('/packs', [PackController::class, 'index']);
