@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -20,7 +19,7 @@ import djThuboGuezana from "@/assets/djs/dj-thubou_guezana.jpg";
 import djWilly from "@/assets/djs/dj-willy.jpg";
 import djZidane from "@/assets/djs/dj-zidane.jpg";
 
-// Artist Imports
+// Artist Import
 import wizdomOg from "@/assets/artists/wizdom-og.jpg";
 import karlixGyal from "@/assets/artists/karlix-gyal.jpg";
 import artisteSurprise from "@/assets/artists/artiste-surprise.jpg";
@@ -83,32 +82,13 @@ function usePartenaires() {
   return { data, loading, error };
 }
 
-// Updated DJs array with correct imports and display names
 const djs = [
-  { 
-    nom: "DJ KASSE",           
-    photo: djKasse    
-  },
-  { 
-    nom: "DJ NIKE LA LÉGENDE",        
-    photo: djNike 
-  },
-  { 
-    nom: "DJ SEVEN",           
-    photo: djSeven    
-  },
-  { 
-    nom: "THUBO GUEZANA",      
-    photo: djThuboGuezana 
-  },
-  { 
-    nom: "DJ WILLY", 
-    photo: djWilly     
-  },
-  { 
-    nom: "DJ ZIDANE",          
-    photo: djZidane   
-  }
+  { nom: "DJ KASSE",           photo: djKasse        },
+  { nom: "DJ NIKE LA LÉGENDE", photo: djNike         },
+  { nom: "DJ SEVEN",           photo: djSeven        },
+  { nom: "THUBO GUEZANA",      photo: djThuboGuezana },
+  { nom: "DJ WILLY",           photo: djWilly        },
+  { nom: "DJ ZIDANE",          photo: djZidane       },
 ];
 
 const artists = [
@@ -139,7 +119,6 @@ const SectionError = ({ msg }: { msg: string }) => (
   </div>
 );
 
-
 const MarqueeItem = ({ p }: { p: Partenaire }) => {
   const [imgErr, setImgErr] = useState(false);
   const logoUrl = getImageUrl(p.logo);
@@ -161,7 +140,6 @@ const MarqueeItem = ({ p }: { p: Partenaire }) => {
     : <div>{card}</div>;
 };
 
-
 const MarqueePartenaires = ({ partenaires }: { partenaires: Partenaire[] }) => {
   const items = [...partenaires, ...partenaires];
   return (
@@ -180,7 +158,6 @@ const MarqueePartenaires = ({ partenaires }: { partenaires: Partenaire[] }) => {
     </div>
   );
 };
-
 
 const LeaderCard = ({ candidat: c, delay }: { candidat: Candidat; delay: number }) => {
   const photos = [c.photo1, c.photo2].filter(Boolean).map(p => getImageUrl(p)!).filter(Boolean);
@@ -201,7 +178,6 @@ const LeaderCard = ({ candidat: c, delay }: { candidat: Candidat; delay: number 
     setPaused(true); setTimeout(() => setPaused(false), 5000);
   };
 
-
   const getBadgeText = () => {
     if (c.categorie === "miss") return "LEADER MISS";
     if (c.categorie === "master") return "LEADER MASTER";
@@ -218,12 +194,15 @@ const LeaderCard = ({ candidat: c, delay }: { candidat: Candidat; delay: number 
       <div className="relative aspect-[3/4] overflow-hidden bg-secondary">
         <div className="absolute top-2 left-2 z-20">
           <span className="bg-gold text-primary-foreground text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-lg">
-            <Trophy size={12} /> {getBadgeText()}
+            <Trophy size={12} />
+            <span className="hidden sm:inline">{getBadgeText()}</span>
+            <span className="sm:hidden">{c.categorie === "miss" ? "MISS" : "MASTER"}</span>
           </span>
         </div>
-        <div className="absolute top-2 right-2 z-10">
-          <span className="bg-background/80 backdrop-blur-sm text-foreground text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
-            <Heart size={12} className="text-gold" /> {Number(c.votes_count ?? 0).toLocaleString()}
+        <div className="absolute top-2 right-2 z-10 max-w-[50%]">
+          <span className="bg-background/80 backdrop-blur-sm text-foreground text-xs font-bold px-2 sm:px-3 py-1 rounded-full flex items-center gap-1">
+            <Heart size={12} className="text-gold flex-shrink-0" />
+            <span className="truncate">{Number(c.votes_count ?? 0).toLocaleString()}</span>
           </span>
         </div>
         {photos.length > 0
@@ -253,30 +232,31 @@ const LeaderCard = ({ candidat: c, delay }: { candidat: Candidat; delay: number 
         )}
       </div>
       <div className="p-4">
-        <div className="flex justify-between items-start mb-2">
-          <div>
-            <h3 className="font-display text-xl text-foreground leading-tight">{c.nom}</h3>
+        <div className="flex justify-between items-start mb-2 gap-2">
+          <div className="min-w-0 flex-1">
+            <h3 className="font-display text-xl text-foreground leading-tight truncate">{c.nom}</h3>
             {(c.age || c.ville) && (
-              <p className="text-xs text-muted-foreground">{[c.age ? `${c.age} ans` : null, c.ville].filter(Boolean).join(" • ")}</p>
+              <p className="text-xs text-muted-foreground truncate">{[c.age ? `${c.age} ans` : null, c.ville].filter(Boolean).join(" • ")}</p>
             )}
           </div>
-          <span className="text-sm font-bold text-gold">#{c.numero}</span>
+          <span className="text-sm font-bold text-gold flex-shrink-0">#{c.numero}</span>
         </div>
         {c.description && <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{c.description}</p>}
-        {c.talent && <div className="mb-3"><span className="text-xs bg-secondary text-foreground px-2 py-1 rounded-full">{c.talent}</span></div>}
+        {c.talent && <div className="mb-3"><span className="text-xs bg-secondary text-foreground px-2 py-1 rounded-full line-clamp-1 max-w-full inline-block">{c.talent}</span></div>}
         <div className="flex gap-2">
           <Link to={`/candidats/${c.id}`} className="flex-1 flex items-center justify-center gap-1 py-2 text-xs font-medium bg-secondary text-foreground rounded-lg hover:bg-secondary/80 transition-colors">
-            <Eye size={14} /> Profil
+            <Eye size={14} />
+            <span className="hidden sm:inline">Profil</span>
           </Link>
           <Link to={`/vote?candidat=${c.id}`} className="flex-1 flex items-center justify-center gap-1 py-2 gold-gradient text-primary-foreground text-xs font-bold uppercase rounded-lg">
-            <Heart size={14} /> Voter
+            <Heart size={14} />
+            <span className="hidden sm:inline">Voter</span>
           </Link>
         </div>
       </div>
     </motion.div>
   );
 };
-
 
 const EvenementCard = ({ ev, delay }: { ev: Evenement; delay: number }) => {
   const photo = Array.isArray(ev.photos) && ev.photos.length > 0 ? getImageUrl(ev.photos[0] as string) : null;
@@ -314,18 +294,57 @@ const EvenementCard = ({ ev, delay }: { ev: Evenement; delay: number }) => {
   );
 };
 
+// ─── DJ Card: full photo visible + fills every pixel of the card ──────────────
+// Technique: two stacked <img> layers inside a fixed-height container.
+//   Layer 1 (bottom): same photo blurred + scaled to cover — fills any empty
+//             space with the photo's own colors, no grey/black bars.
+//   Layer 2 (top):    real photo with object-contain — never cropped, full
+//             picture always visible, original quality preserved.
+const DjCard = ({ dj, delay }: { dj: { nom: string; photo: string }; delay: number }) => (
+  <motion.div
+    className="bg-background rounded-xl border border-border overflow-hidden group"
+    initial={{ opacity: 0, y: 20 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    viewport={{ once: true }}
+    transition={{ delay }}
+  >
+    <div className="relative w-full overflow-hidden" style={{ height: "200px" }}>
+      {/* Blurred fill layer — covers gaps using the photo's own palette */}
+      <img
+        src={dj.photo}
+        alt=""
+        aria-hidden="true"
+        className="absolute inset-0 w-full h-full object-cover"
+        style={{ filter: "blur(14px) brightness(0.65)", transform: "scale(1.2)" }}
+      />
+      {/* Crisp foreground — full photo, never cropped */}
+      <img
+        src={dj.photo}
+        alt={dj.nom}
+        className="relative z-10 w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
+        loading="eager"
+        decoding="async"
+      />
+    </div>
+    <div className="p-3 text-center">
+      <p className="font-display text-sm text-foreground font-semibold">{dj.nom}</p>
+    </div>
+  </motion.div>
+);
 
 const Home = () => {
   const { data: candidats,   loading: loadingC, error: errorC } = useCandidats();
   const { data: evenements,  loading: loadingE, error: errorE } = useEvenements();
   const { data: partenaires, loading: loadingP, error: errorP } = usePartenaires();
 
- 
-  const topCandidats = candidats.slice(0, 4);
+  const topCandidats    = candidats.slice(0, 4);
+  const topMiss         = candidats.filter(c => c.categorie === "miss").slice(0, 1)[0];
+  const topMaster       = candidats.filter(c => c.categorie === "master").slice(0, 1)[0];
+  const mobileCandidats = [topMiss, topMaster].filter(Boolean);
 
   return (
     <div>
-     
+      {/* ===== 1. HERO ===== */}
       <section className="relative min-h-[85vh] flex items-center justify-center overflow-hidden">
         <img src={heroBg} alt="" className="absolute inset-0 w-full h-full object-cover" />
         <div className="absolute inset-0 bg-black/75" />
@@ -366,7 +385,7 @@ const Home = () => {
         </div>
       </section>
 
-      
+      {/* ===== 2. ABOUT ===== */}
       <section className="py-16 bg-background">
         <div className="container mx-auto px-4 max-w-4xl text-center">
           <motion.h2 className="font-display text-3xl gold-text mb-6"
@@ -401,20 +420,23 @@ const Home = () => {
           </div>
           {loadingC && <SectionLoader />}
           {errorC   && <SectionError msg={errorC} />}
-          {!loadingC && !errorC && topCandidats.length > 0 && (
+          {!loadingC && !errorC && (
             <>
-              {/* Desktop: 4 cards grid with original size */}
               <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
-                {topCandidats.map((c, i) => <LeaderCard key={c.id} candidat={c} delay={i * 0.1} />)}
+                {topCandidats.length > 0 ? (
+                  topCandidats.map((c, i) => <LeaderCard key={c.id} candidat={c} delay={i * 0.1} />)
+                ) : (
+                  <p className="text-center text-muted-foreground text-sm py-8 col-span-4">Aucun candidat disponible pour le moment.</p>
+                )}
               </div>
-              {/* Mobile: 2 cards grid with original size */}
               <div className="md:hidden grid grid-cols-2 gap-4 max-w-lg mx-auto">
-                {topCandidats.slice(0, 2).map((c, i) => <LeaderCard key={c.id} candidat={c} delay={i * 0.1} />)}
+                {mobileCandidats.length > 0 ? (
+                  mobileCandidats.map((c, i) => <LeaderCard key={c.id} candidat={c} delay={i * 0.1} />)
+                ) : (
+                  <p className="text-center text-muted-foreground text-sm py-8 col-span-2">Aucun candidat disponible pour le moment.</p>
+                )}
               </div>
             </>
-          )}
-          {!loadingC && !errorC && topCandidats.length === 0 && (
-            <p className="text-center text-muted-foreground text-sm py-8">Aucun candidat disponible pour le moment(0).</p>
           )}
           <div className="text-center mt-8">
             <Link to="/candidats" className="inline-flex items-center gap-1 text-primary text-sm font-medium hover:underline">
@@ -424,7 +446,7 @@ const Home = () => {
         </div>
       </section>
 
-      
+      {/* ===== 4. EVENTS ===== */}
       <section className="py-14 bg-background">
         <div className="container mx-auto px-4">
           <h2 className="font-display text-3xl gold-text text-center mb-3">Événements Annexes</h2>
@@ -447,28 +469,23 @@ const Home = () => {
         </div>
       </section>
 
-      
+      {/* ===== 5. LINE-UP ===== */}
       <section className="py-16 bg-card">
         <div className="container mx-auto px-4">
           <h2 className="font-display text-3xl gold-text text-center mb-10">Line-Up</h2>
+
+          {/* DJs */}
           <div className="flex items-center gap-2 mb-6 justify-center">
             <Music className="text-primary" size={24} />
             <h3 className="font-display text-xl text-foreground">DJs</h3>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 max-w-5xl mx-auto mb-12">
             {djs.map((dj, i) => (
-              <motion.div key={dj.nom} className="bg-background rounded-xl border border-border overflow-hidden group"
-                initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }} transition={{ delay: i * 0.1 }}>
-                <div className="aspect-square overflow-hidden">
-                  <img src={dj.photo} alt={dj.nom} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                </div>
-                <div className="p-3 text-center">
-                  <p className="font-display text-sm text-foreground font-semibold">{dj.nom}</p>
-                </div>
-              </motion.div>
+              <DjCard key={dj.nom} dj={dj} delay={i * 0.1} />
             ))}
           </div>
+
+          {/* Artists */}
           <div className="flex items-center gap-2 mb-6 justify-center">
             <Crown className="text-primary" size={24} />
             <h3 className="font-display text-xl text-foreground">Artistes</h3>
@@ -478,7 +495,7 @@ const Home = () => {
               <motion.div key={a.nom} className="bg-background rounded-xl border border-border overflow-hidden group text-center"
                 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }} transition={{ delay: i * 0.1 }}>
-                <div className="aspect-[3/4] overflow-hidden">
+                <div className="aspect-[3/4] overflow-hidden bg-secondary">
                   <img src={a.photo} alt={a.nom} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                 </div>
                 <div className="p-4">
@@ -491,7 +508,7 @@ const Home = () => {
         </div>
       </section>
 
-      
+      {/* ===== 6. TESTIMONIALS ===== */}
       <section className="py-14 bg-background">
         <div className="container mx-auto px-4">
           <h2 className="font-display text-3xl gold-text text-center mb-10">Ce Qu'ils Disent</h2>
@@ -510,7 +527,7 @@ const Home = () => {
         </div>
       </section>
 
-      
+      {/* ===== 7. NEWS ===== */}
       <section className="py-14 bg-card">
         <div className="container mx-auto px-4">
           <h2 className="font-display text-3xl gold-text text-center mb-10">Actualités</h2>
@@ -531,7 +548,7 @@ const Home = () => {
         </div>
       </section>
 
-      
+      {/* ===== 8. PARTNERS ===== */}
       <section className="py-12 bg-background">
         <div className="container mx-auto px-4 mb-8">
           <h2 className="font-display text-2xl gold-text text-center">Nos Partenaires</h2>
@@ -551,8 +568,8 @@ const Home = () => {
         </div>
       </section>
 
-     
-      <section className="py-16 bg-card text-center"> 
+      {/* ===== 9. CTA ===== */}
+      <section className="py-16 bg-card text-center">
         <div className="container mx-auto px-4">
           <h2 className="font-display text-3xl gold-text mb-4">Prêt à Briller ?</h2>
           <p className="text-muted-foreground mb-8 max-w-xl mx-auto">

@@ -8,16 +8,14 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { 
-  Users, Crown, Ticket, MessageSquare, TrendingUp, 
-  DollarSign, Loader2 
+  Users, Crown, Ticket, MessageSquare, Loader2 
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell
 } from "recharts";
 
-import { API_URL } from "@/services/api";  // ✅ Named import for API_URL
-// import api from "@/services/api";  // ❌ This won't work - no default export
+import { API_URL } from "@/services/api";
 
 const COLORS_PIE = ["#FFD700", "#B8860B", "#666", "#444", "#333"];
 
@@ -27,7 +25,6 @@ interface Stats {
   total_candidats_miss?: number;
   total_candidats_master?: number;
   total_votes?: number;
-  montant_votes?: number;
   billets_vendus?: number;
   revenus_billets?: number;
   messages_non_lus?: number;
@@ -63,7 +60,6 @@ const Dashboard = () => {
 
   const token = localStorage.getItem("token");
 
-  // Helper function for API calls with auth headers
   const fetchWithAuth = async (endpoint: string) => {
     const response = await fetch(`${API_URL}${endpoint}`, {
       headers: {
@@ -72,22 +68,18 @@ const Dashboard = () => {
         "Content-Type": "application/json",
       },
     });
-    
     if (!response.ok) {
       if (response.status === 401) {
-        // Handle unauthorized
         localStorage.removeItem("token");
         window.location.href = "/login";
         throw new Error("Session expirée");
       }
       throw new Error(`Erreur ${response.status}`);
     }
-    
     const data = await response.json();
     return data.data || data;
   };
 
-  // Charger les stats principales
   const fetchStats = async () => {
     try {
       const data = await fetchWithAuth('/admin/stats');
@@ -97,7 +89,6 @@ const Dashboard = () => {
     }
   };
 
-  // Charger les stats votes
   const fetchStatsVotes = async (p: string = periode) => {
     try {
       const data = await fetchWithAuth(`/admin/stats/votes?periode=${p}`);
@@ -125,13 +116,11 @@ const Dashboard = () => {
     fetchStatsVotes(periode);
   }, [periode]);
 
-  // Formatter l'évolution pour le graphique
   const evolutionData = statsVotes?.evolution?.map((e) => ({
     jour: new Date(e.date).toLocaleDateString("fr-FR", { weekday: "short" }),
     votes: e.votes,
   })) || [];
 
-  // Formatter les packs pour le camembert
   const ventesPackData = statsVotes?.par_candidat?.slice(0, 5).map((c, i) => ({
     nom: c.nom,
     valeur: c.total_votes || 0,
@@ -151,6 +140,10 @@ const Dashboard = () => {
     );
   }
 
+  // 1 vote = 100 FCFA
+  const totalVotes = Number(stats?.total_votes ?? 0);
+  const montantCollecte = totalVotes * 100;
+
   const statsCards = [
     {
       label: "Total Candidats",
@@ -161,8 +154,8 @@ const Dashboard = () => {
     },
     {
       label: "Total Votes",
-      value: Number(stats?.total_votes ?? 0).toLocaleString(),
-      detail: `${Number(stats?.montant_votes ?? 0).toLocaleString()} FCFA collectés`,
+      value: totalVotes.toLocaleString(),
+      detail: `${montantCollecte.toLocaleString()} FCFA collectés`,
       icon: Crown,
       couleur: "text-primary",
     },
@@ -178,23 +171,9 @@ const Dashboard = () => {
       value: stats?.messages_non_lus ?? "—",
       detail: `${stats?.messages_non_lus ?? 0} non lu(s)`,
       icon: MessageSquare,
-      couleur: stats?.messages_non_lus && stats.messages_non_lus > 0 
-        ? "text-destructive" 
+      couleur: stats?.messages_non_lus && stats.messages_non_lus > 0
+        ? "text-destructive"
         : "text-primary",
-    },
-    {
-      label: "Revenus Votes",
-      value: Number(stats?.montant_votes ?? 0).toLocaleString(),
-      detail: "FCFA",
-      icon: TrendingUp,
-      couleur: "text-primary",
-    },
-    {
-      label: "Revenus Totaux",
-      value: Number((stats?.montant_votes ?? 0) + (stats?.revenus_billets ?? 0)).toLocaleString(),
-      detail: "Votes + Billets",
-      icon: DollarSign,
-      couleur: "text-primary",
     },
   ];
 
@@ -204,7 +183,7 @@ const Dashboard = () => {
       <p className="text-muted-foreground mb-8">Vue d'ensemble de Golden Vibes Events</p>
 
       {/* Cartes de statistiques */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {statsCards.map((stat, i) => (
           <motion.div
             key={stat.label}
@@ -248,7 +227,6 @@ const Dashboard = () => {
               ))}
             </div>
           </div>
-
           {evolutionData.length === 0 ? (
             <div className="flex items-center justify-center h-[250px] text-muted-foreground text-sm">
               Aucune donnée disponible
@@ -257,15 +235,8 @@ const Dashboard = () => {
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={evolutionData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(0 0% 20%)" />
-                <XAxis 
-                  dataKey="jour" 
-                  stroke="hsl(0 0% 60%)" 
-                  fontSize={12} 
-                />
-                <YAxis 
-                  stroke="hsl(0 0% 60%)" 
-                  fontSize={12} 
-                />
+                <XAxis dataKey="jour" stroke="hsl(0 0% 60%)" fontSize={12} />
+                <YAxis stroke="hsl(0 0% 60%)" fontSize={12} />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "hsl(0 0% 8%)",
@@ -274,11 +245,7 @@ const Dashboard = () => {
                   }}
                   labelStyle={{ color: "hsl(0 0% 95%)" }}
                 />
-                <Bar 
-                  dataKey="votes" 
-                  fill="hsl(43 72% 55%)" 
-                  radius={[4, 4, 0, 0]} 
-                />
+                <Bar dataKey="votes" fill="hsl(43 72% 55%)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -310,9 +277,7 @@ const Dashboard = () => {
                     <Cell key={`cell-${index}`} fill={entry.couleur} />
                   ))}
                 </Pie>
-                <Tooltip 
-                  formatter={(value: any) => [`${value} votes`, 'Votes']}
-                />
+                <Tooltip formatter={(value: any) => [`${value} votes`, 'Votes']} />
               </PieChart>
             </ResponsiveContainer>
           )}
@@ -329,8 +294,8 @@ const Dashboard = () => {
         ) : (
           <div className="space-y-3">
             {stats.top_candidats.slice(0, 5).map((c, i) => (
-              <motion.div 
-                key={c.id} 
+              <motion.div
+                key={c.id}
                 className="flex items-center gap-4 p-3 bg-secondary rounded-lg hover:bg-secondary/80 transition-colors"
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
