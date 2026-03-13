@@ -29,6 +29,8 @@ const defaultForm: FormState = {
   nom: "", prenom: "", email: "", telephone: "", objet: "", message: "",
 };
 
+const PHONE_PREFIX = "+237";
+
 const fadeUp = {
   hidden:  { opacity: 0, y: 20 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" as const } },
@@ -50,10 +52,22 @@ const Contact = () => {
     setError(null);
   };
 
+  // Keep only digits after the prefix, prevent the user from deleting the prefix
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    // Strip everything except digits
+    const digits = raw.replace(/\D/g, "");
+    setForm((prev) => ({ ...prev, telephone: digits }));
+    setError(null);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSending(true);
     setError(null);
+
+    // Always submit with the +237 prefix
+    const fullPhone = `${PHONE_PREFIX}${form.telephone}`.trim();
 
     try {
       const res = await fetch(`${API_URL}/contact`, {
@@ -62,7 +76,7 @@ const Contact = () => {
         body: JSON.stringify({
           nom:       `${form.prenom} ${form.nom}`.trim(),
           email:     form.email,
-          telephone: form.telephone,
+          telephone: fullPhone,
           objet:     form.objet,
           message:   form.message,
         }),
@@ -157,12 +171,26 @@ const Contact = () => {
               />
             </div>
 
+            {/* Phone with fixed +237 prefix */}
             <div>
               <label className="block text-sm text-muted-foreground mb-1">Téléphone *</label>
-              <input
-                required type="tel" name="telephone" value={form.telephone} onChange={handleChange}
-                className={inputCls} placeholder="6XX XXX XXX"
-              />
+              <div className="flex">
+                {/* Prefix badge */}
+                <span className="flex items-center px-3 bg-secondary border border-r-0 border-border rounded-l-lg text-sm text-foreground font-medium select-none whitespace-nowrap">
+                  🇨🇲 +237
+                </span>
+                <input
+                  required
+                  type="tel"
+                  name="telephone"
+                  value={form.telephone}
+                  onChange={handlePhoneChange}
+                  inputMode="numeric"
+                  maxLength={9}
+                  className="flex-1 px-4 py-3 bg-secondary border border-border rounded-r-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary transition-all text-sm"
+                  placeholder="6XX XXX XXX"
+                />
+              </div>
             </div>
 
             <div>
@@ -231,7 +259,7 @@ const Contact = () => {
               {[
                 { icon: MapPin, text: "Dschang, Cameroun"              },
                 { icon: Phone,  text: "652 430 272 / 599 159 058"      },
-                { icon: Mail,   text: "contact@goldenvibes-event.com" },
+                { icon: Mail,   text: "contact@goldenvibes-event.com"  },
                 { icon: Clock,  text: "Lun - Sam : 8h00 - 18h00"      },
               ].map((item, i) => (
                 <div key={i} className="flex items-center gap-3 text-sm text-muted-foreground">
@@ -250,7 +278,7 @@ const Contact = () => {
                   { icon: Twitter,       label: "Twitter",   href: "#" },
                   { icon: MessageCircle, label: "WhatsApp",  href: "#" },
                 ].map(s => (
-                  <a                                             
+                  <a
                     key={s.label}
                     href={s.href}
                     title={s.label}
