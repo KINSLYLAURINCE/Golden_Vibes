@@ -22,4 +22,10 @@ class Candidat extends Model
     {
         return $this->hasMany(Vote::class);
     }
+
+    // Accesseur pour obtenir facilement le total de votes validés
+    public function getVotesValideCountAttribute()
+    {
+        return $this->votes()->where('statut', 'valide')->count();
+    }
 }

@@ -5,104 +5,120 @@ namespace App\Services;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
-/**
- * Service NotchPay pour paiements mobiles
- * Documentation: https://developer.notchpay.co
- */
 class NotchPayService
 {
-    protected $config;
-    protected $baseUrl;
+    private $publicKey;
+    private $secretKey;
+    private $baseUrl;
 
     public function __construct()
     {
-        $this->config = config('services.notchpay');
-        
-        $this->baseUrl = $this->config['mode'] === 'production'
-            ? 'https://api.notchpay.co'
-            : 'https://api.notchpay.co'; // Même URL, les clés déterminent l'env
+        $this->publicKey = config('services.notchpay.public_key');
+        $this->secretKey = config('services.notchpay.secret_key');
+        $this->baseUrl = 'https://api.notchpay.co';
     }
 
-    /**
-     * Initier un paiement
-     */
     public function initiatePayment($data)
     {
         try {
+            // URL frontend en local ou production
+            $frontendUrl = config('app.env') === 'production' 
+                ? 'https://goldenvibes-event.com' 
+                : 'http://localhost:3000';
+            
             $response = Http::withHeaders([
-                'Authorization' => $this->config['public_key'],
-                'Content-Type' => 'application/json',
-            ])->post("{$this->baseUrl}/payments", [
-                'amount' => $data['amount'], // Montant en FCFA
+                'Authorization' => $this->publicKey,
+                'Accept' => 'application/json',
+                'Content-Type' => 'application/json'
+            ])->post("{$this->baseUrl}/payments/initialize", [
+                'amount' => $data['amount'],
                 'currency' => 'XAF',
+                'email' => 'contact@goldenvibes.com',
+                'phone' => $data['phone'],
                 'description' => $data['description'],
-                'reference' => $data['transaction_id'], // Votre ID unique
-                'email' => $data['email'] ?? 'client@goldenvibes.cm',
-                'phone' => $data['phone'], // Format: 237xxxxxxxxx
-                'callback' => $this->config['webhook_url'],
+                'reference' => $data['transaction_id'],
+                
+                // URLs de redirection
+                'callback' => $frontendUrl . '/vote/success?transaction=' . $data['transaction_id'],
+                'return_url' => $frontendUrl . '/vote/success?transaction=' . $data['transaction_id'],
+                'cancel_url' => $frontendUrl . '/vote/cancel?transaction=' . $data['transaction_id'],
             ]);
 
-            $result = $response->json();
+            Log::info('NotchPay Initiate Response', [
+                'status' => $response->status(),
+                'body' => $response->json()
+            ]);
 
-            Log::info('NotchPay - Paiement initié', $result);
-
-            if (isset($result['transaction']['reference'])) {
+            if ($response->successful()) {
+                $result = $response->json();
                 return [
                     'success' => true,
-                    'payment_url' => $result['authorization_url'],
-                    'reference' => $result['transaction']['reference'],
-                    'transaction_id' => $data['transaction_id'],
+                    'payment_url' => $result['authorization_url'] ?? null,
+                    'reference' => $result['transaction']['reference'] ?? null
                 ];
             }
 
-            return [
-                'success' => false,
-                'error' => $result['message'] ?? 'Erreur inconnue',
-            ];
-
-        } catch (\Exception $e) {
-            Log::error('NotchPay - Exception', [
-                'message' => $e->getMessage(),
+            Log::error('NotchPay Init Failed', [
+                'status' => $response->status(),
+                'error' => $response->body()
             ]);
 
             return [
                 'success' => false,
-                'error' => $e->getMessage(),
+                'error' => $response->json()['message'] ?? 'Erreur paiement'
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('NotchPay Exception', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
             ];
         }
     }
 
     /**
-     * Vérifier le statut d'un paiement
+     * Vérifier le statut d'une transaction NotchPay
      */
     public function verifyPayment($reference)
     {
         try {
+            Log::info('NotchPay Verify Payment', ['reference' => $reference]);
+
             $response = Http::withHeaders([
-                'Authorization' => $this->config['public_key'],
+                'Authorization' => $this->publicKey,
+                'Accept' => 'application/json',
             ])->get("{$this->baseUrl}/payments/{$reference}");
 
-            $result = $response->json();
+            Log::info('NotchPay Verify Response', [
+                'status' => $response->status(),
+                'body' => $response->json()
+            ]);
 
-            if (isset($result['transaction'])) {
+            if ($response->successful()) {
+                $result = $response->json();
+                $transaction = $result['transaction'] ?? $result;
+                
                 return [
-                    'status' => $result['transaction']['status'], // complete, pending, failed
-                    'amount' => $result['transaction']['amount'],
-                    'currency' => $result['transaction']['currency'],
-                    'reference' => $reference,
-                    'customer' => $result['transaction']['customer'],
+                    'success' => true,
+                    'status' => $transaction['status'] ?? 'unknown',
+                    'reference' => $transaction['reference'] ?? $reference,
+                    'amount' => $transaction['amount'] ?? 0,
                 ];
             }
 
-            return null;
+            return [
+                'success' => false,
+                'error' => 'Impossible de vérifier le paiement'
+            ];
 
         } catch (\Exception $e) {
-            Log::error('NotchPay - Erreur vérification', [
-                'reference' => $reference,
-                'error' => $e->getMessage()
-            ]);
-
-            return null;
+            Log::error('NotchPay Verify Exception', ['message' => $e->getMessage()]);
+            return ['success' => false, 'error' => $e->getMessage()];
         }
     }
 }

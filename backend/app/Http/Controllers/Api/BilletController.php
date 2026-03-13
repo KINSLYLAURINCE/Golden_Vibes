@@ -29,11 +29,21 @@ class BilletController extends Controller
     {
         $request->validate([
             'pack_id' => 'required|exists:packs,id',
-            'quantite' => 'required|integer|min:1',
-            'nom' => 'required|string',
-            'email' => 'required|email',
-            'telephone' => 'required|string|regex:/^237[0-9]{9}$/',
+            'quantite' => 'required|integer|min:1|max:10',
+            'nom' => 'required|string|min:2|max:100',
+            'email' => 'required|email|max:150',
+            'telephone' => 'required|string|regex:/^237[0-9]{9}$/|size:12',
         ]);
+
+        // Nettoyer le téléphone
+        $telephone = preg_replace('/[^0-9]/', '', $request->telephone);
+
+        if (!preg_match('/^237[0-9]{9}$/', $telephone)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Format de téléphone invalide. Utilisez : 237XXXXXXXXX'
+            ], 400);
+        }
 
         $pack = Pack::findOrFail($request->pack_id);
 
@@ -74,11 +84,15 @@ class BilletController extends Controller
         ]);
 
         if ($payment && $payment['success']) {
+            // ✅ Stocker la référence NotchPay pour vérification ultérieure
+            $billet->update(['notchpay_reference' => $payment['reference']]);
+
             return response()->json([
                 'success' => true,
                 'data' => [
                     'payment_url' => $payment['payment_url'],
                     'transaction_id' => $transactionId,
+                    'notchpay_reference' => $payment['reference'],
                 ],
                 'message' => 'Redirection vers paiement'
             ], 201);
@@ -88,8 +102,102 @@ class BilletController extends Controller
 
         return response()->json([
             'success' => false,
-            'message' => 'Erreur initialisation paiement'
+            'message' => 'Erreur initialisation paiement',
+            'error' => $payment['error'] ?? 'Erreur inconnue'
         ], 500);
+    }
+
+    /**
+     * ✅ NOUVELLE MÉTHODE : Vérifier le statut d'un billet
+     */
+    public function checkBillet($transaction_id)
+    {
+        $billet = Billet::where('transaction_id', $transaction_id)->first();
+
+        if (!$billet) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Billet non trouvé'
+            ], 404);
+        }
+
+        // Si déjà validé, retourner directement
+        if ($billet->statut_paiement === 'valide') {
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'transaction_id' => $billet->transaction_id,
+                    'statut' => $billet->statut_paiement,
+                    'qr_code' => $billet->qr_code,
+                    'quantite' => $billet->quantite,
+                    'montant_total' => $billet->montant_total,
+                    'pack' => $billet->pack ? [
+                        'id' => $billet->pack->id,
+                        'nom' => $billet->pack->nom,
+                        'prix' => $billet->pack->prix,
+                    ] : null
+                ]
+            ]);
+        }
+
+        // ✅ Sinon, vérifier activement auprès de NotchPay
+        if ($billet->notchpay_reference) {
+            $verification = $this->notchpay->verifyPayment($billet->notchpay_reference);
+
+            Log::info('Vérification active NotchPay Billet', [
+                'transaction_id' => $transaction_id,
+                'reference' => $billet->notchpay_reference,
+                'result' => $verification
+            ]);
+
+            if ($verification['success'] && $verification['status'] === 'complete') {
+                // ✅ Paiement confirmé ! Mettre à jour
+                $billet->update([
+                    'statut_paiement' => 'valide',
+                    'statut_billet' => 'valide'
+                ]);
+
+                // Envoyer email
+                $this->sendBilletEmailSimple($billet);
+
+                // Incrémenter places vendues
+                $pack = Pack::find($billet->pack_id);
+                $pack->increment('places_vendues', $billet->quantite);
+
+                Log::info('✅ Billet validé via vérification active', [
+                    'transaction_id' => $transaction_id,
+                    'pack' => $pack->nom,
+                    'qr_code' => $billet->qr_code
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'data' => [
+                        'transaction_id' => $billet->transaction_id,
+                        'statut' => 'valide',
+                        'qr_code' => $billet->qr_code,
+                        'quantite' => $billet->quantite,
+                        'montant_total' => $billet->montant_total,
+                        'pack' => [
+                            'id' => $pack->id,
+                            'nom' => $pack->nom,
+                            'prix' => $pack->prix,
+                        ]
+                    ]
+                ]);
+            }
+        }
+
+        // Toujours en attente
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'transaction_id' => $billet->transaction_id,
+                'statut' => $billet->statut_paiement,
+                'quantite' => $billet->quantite,
+                'montant_total' => $billet->montant_total,
+            ]
+        ]);
     }
 
     /**
@@ -98,13 +206,32 @@ class BilletController extends Controller
      */
     public function callbackNotchPay(Request $request)
     {
-        Log::info('NotchPay Webhook Billet', $request->all());
+        Log::info('NotchPay Webhook Billet COMPLET', $request->all());
 
-        $reference = $request->input('reference');
-        $transactionId = $request->input('transaction.reference');
-        $status = $request->input('transaction.status');
+        $data = $request->input('data');
+        
+        if (!$data) {
+            Log::error('Webhook NotchPay Billet - Pas de données');
+            return response()->json(['error' => 'Pas de données'], 400);
+        }
 
-        // Chercher le billet
+        $transactionId = $data['merchant_reference'] ?? $data['trxref'];
+        $notchpayRef = $data['reference'];
+        $status = $data['status'];
+        $event = $request->input('event');
+
+        Log::info('NotchPay Webhook Billet Parsed', [
+            'event' => $event,
+            'transaction_id' => $transactionId,
+            'notchpay_ref' => $notchpayRef,
+            'status' => $status
+        ]);
+
+        if ($event !== 'payment.complete') {
+            Log::info('Event ignoré (pas complete)', ['event' => $event]);
+            return response()->json(['success' => true, 'ignored' => true], 200);
+        }
+
         $billet = Billet::where('transaction_id', $transactionId)->first();
 
         if (!$billet) {
@@ -112,68 +239,37 @@ class BilletController extends Controller
             return response()->json(['error' => 'Billet non trouvé'], 404);
         }
 
-        // MODE SANDBOX : Accepter directement si status = complete
-        // MODE PRODUCTION : Vérifier avec NotchPay API
-        if (config('services.notchpay.mode') === 'sandbox') {
-            // ⚠️ SANDBOX : Pas de vérification réelle
-            Log::warning('Mode SANDBOX - Validation sans vérification NotchPay');
-            
-            if ($status === 'complete') {
-                // ✅ PAIEMENT VALIDÉ (simulation)
-                
-                $billet->update([
-                    'statut_paiement' => 'valide',
-                    'statut_billet' => 'valide'
-                ]);
-
-                // ENVOYER EMAIL avec code simple
-                $this->sendBilletEmailSimple($billet);
-
-                // Incrémenter places vendues
-                $pack = Pack::find($billet->pack_id);
-                $pack->increment('places_vendues', $billet->quantite);
-
-                Log::info('Billet validé (SANDBOX)', ['transaction' => $transactionId]);
-
-                return response()->json(['success' => true, 'mode' => 'sandbox']);
-            }
-
-            // Status failed
-            $billet->update(['statut_paiement' => 'echoue']);
-            return response()->json(['success' => false]);
+        if ($billet->statut_paiement === 'valide') {
+            Log::warning('Billet déjà validé', ['transaction_id' => $transactionId]);
+            return response()->json(['success' => true, 'already_processed' => true], 200);
         }
 
-        // MODE PRODUCTION : Vérification réelle avec NotchPay
-        $verification = $this->notchpay->verifyPayment($reference);
-
-        if (!$verification) {
-            Log::error('Vérification NotchPay impossible', ['reference' => $reference]);
-            return response()->json(['error' => 'Vérification impossible'], 500);
-        }
-
-        if ($verification['status'] === 'complete') {
-            // ✅ PAIEMENT VALIDÉ (production)
-            
+        if ($status === 'complete') {
             $billet->update([
                 'statut_paiement' => 'valide',
                 'statut_billet' => 'valide'
             ]);
 
+            // Envoyer email
             $this->sendBilletEmailSimple($billet);
 
+            // Incrémenter places vendues
             $pack = Pack::find($billet->pack_id);
             $pack->increment('places_vendues', $billet->quantite);
 
-            Log::info('Billet validé (PRODUCTION)', ['transaction' => $transactionId]);
+            Log::info('✅ Billet validé via WEBHOOK', [
+                'transaction_id' => $transactionId,
+                'pack' => $pack->nom,
+                'qr_code' => $billet->qr_code
+            ]);
 
-            return response()->json(['success' => true, 'mode' => 'production']);
+            return response()->json([
+                'success' => true,
+                'message' => 'Billet validé'
+            ], 200);
         }
 
-        if ($verification['status'] === 'failed') {
-            $billet->update(['statut_paiement' => 'echoue']);
-        }
-
-        return response()->json(['success' => false]);
+        return response()->json(['success' => false, 'status' => $status], 200);
     }
 
     /**
@@ -182,20 +278,17 @@ class BilletController extends Controller
     private function sendBilletEmailSimple($billet)
     {
         try {
-            // Charger la relation pack
             $billet->load('pack');
-
-            // Envoyer l'email
             Mail::to($billet->email)->send(new BilletConfirmation($billet));
 
-            Log::info('Email billet envoyé', [
+            Log::info('✅ Email billet envoyé', [
                 'email' => $billet->email,
                 'code' => $billet->qr_code,
                 'pack' => $billet->pack->nom,
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Erreur envoi email billet', [
+            Log::error('❌ Erreur envoi email billet', [
                 'billet_id' => $billet->id,
                 'email' => $billet->email,
                 'error' => $e->getMessage()

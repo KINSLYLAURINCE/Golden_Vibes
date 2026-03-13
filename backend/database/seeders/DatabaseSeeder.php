@@ -32,7 +32,5 @@ class DatabaseSeeder extends Seeder
         ]);
 
         echo "\n✨ Seeding terminé avec succès !\n";
-        echo "📧 Login admin : admin@goldenvibes.com\n";
-        echo "🔑 Password : password\n";
     }
 }

@@ -11,6 +11,7 @@ class CandidatController extends Controller
     // GET /api/candidats
     public function index(Request $request)
     {
+        // ✅ Pas besoin de withCount, on utilise directement votes_count
         $query = Candidat::where('statut', 'actif');
 
         // Filtre par catégorie
@@ -43,6 +44,7 @@ class CandidatController extends Controller
     // GET /api/candidats/{id}
     public function show($id)
     {
+        // ✅ Pas besoin de withCount
         $candidat = Candidat::find($id);
 
         if (!$candidat) {
@@ -61,7 +63,11 @@ class CandidatController extends Controller
     // GET /api/candidats/{id}/votes
     public function votes($id)
     {
-        $candidat = Candidat::with('votes')->find($id);
+        $candidat = Candidat::with(['votes' => function($q) {
+            $q->where('statut', 'valide')
+              ->orderBy('created_at', 'desc');
+        }])
+        ->find($id);
 
         if (!$candidat) {
             return response()->json([
@@ -70,10 +76,11 @@ class CandidatController extends Controller
             ], 404);
         }
 
+        // ✅ Utiliser directement votes_count de la colonne
         return response()->json([
             'success' => true,
             'data' => [
-                'total_votes' => $candidat->votes_count,
+                'total_votes' => $candidat->votes_count, // Colonne de la table
                 'montant_total' => $candidat->votes_count * 100,
                 'historique' => $candidat->votes
             ]
