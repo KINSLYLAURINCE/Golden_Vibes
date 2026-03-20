@@ -6,11 +6,18 @@
  * des URLs hardcodées.
  */
 
-export const API_URL =
-  import.meta.env.VITE_API_URL ?? "http://localhost:8000/api";
+// export const API_URL =
+//   import.meta.env.VITE_API_URL ?? "http://localhost:8000/api";
+
+// export const STORAGE_URL =
+//   import.meta.env.VITE_STORAGE_URL ?? "http://localhost:8000/storage";
+
+
+  export const API_URL =
+  import.meta.env.VITE_API_URL ?? "https://api.goldenvibes-event.com/api";
 
 export const STORAGE_URL =
-  import.meta.env.VITE_STORAGE_URL ?? "http://localhost:8000/storage";
+  import.meta.env.VITE_STORAGE_URL ?? "https://api.goldenvibes-event.com/storage";
 
 /**
  * Construit l'URL complète d'une image stockée.
