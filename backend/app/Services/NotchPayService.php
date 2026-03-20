@@ -21,11 +21,15 @@ class NotchPayService
     public function initiatePayment($data)
     {
         try {
-            // URL frontend en local ou production
-            $frontendUrl = config('app.env') === 'production' 
-                ? 'https://goldenvibes-event.com' 
+            // URL frontend
+            $frontendUrl = config('app.env') === 'production'
+                ? 'https://goldenvibes-event.com'
                 : 'http://localhost:3000';
-            
+
+            // ✅ Détecter si c'est un vote ou un billet
+            $isBillet = str_starts_with($data['transaction_id'], 'BILLET-');
+            $baseRoute = $isBillet ? '/billetterie' : '/vote';
+
             $response = Http::withHeaders([
                 'Authorization' => $this->publicKey,
                 'Accept' => 'application/json',
@@ -33,20 +37,22 @@ class NotchPayService
             ])->post("{$this->baseUrl}/payments/initialize", [
                 'amount' => $data['amount'],
                 'currency' => 'XAF',
-                'email' => 'contact@goldenvibes.com',
+                'email' => $data['email'] ?? 'contact@goldenvibes.com',
                 'phone' => $data['phone'],
                 'description' => $data['description'],
                 'reference' => $data['transaction_id'],
-                
-                // URLs de redirection
-                'callback' => $frontendUrl . '/vote/success?transaction=' . $data['transaction_id'],
-                'return_url' => $frontendUrl . '/vote/success?transaction=' . $data['transaction_id'],
-                'cancel_url' => $frontendUrl . '/vote/cancel?transaction=' . $data['transaction_id'],
+
+                // ✅ URLs de redirection correctes selon le type
+                'callback' => $frontendUrl . $baseRoute . '/success?transaction=' . $data['transaction_id'],
+                'return_url' => $frontendUrl . $baseRoute . '/success?transaction=' . $data['transaction_id'],
+                'cancel_url' => $frontendUrl . $baseRoute . '/cancel?transaction=' . $data['transaction_id'],
             ]);
 
-            Log::info('NotchPay Initiate Response', [
+            Log::info('NotchPay Initiate Payment', [
+                'type' => $isBillet ? 'BILLET' : 'VOTE',
+                'transaction_id' => $data['transaction_id'],
                 'status' => $response->status(),
-                'body' => $response->json()
+                'callback_url' => $frontendUrl . $baseRoute . '/success?transaction=' . $data['transaction_id']
             ]);
 
             if ($response->successful()) {
@@ -102,7 +108,7 @@ class NotchPayService
             if ($response->successful()) {
                 $result = $response->json();
                 $transaction = $result['transaction'] ?? $result;
-                
+
                 return [
                     'success' => true,
                     'status' => $transaction['status'] ?? 'unknown',
